@@ -140,6 +140,17 @@
       font-size: 14px;
       font-weight: 500;
     }
+    #loadingOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1001;
+      color: white;
+      font-size: 24px;
+    }
 
     /* Mobile adjustments */
     @media (max-width: 640px) {
@@ -188,12 +199,13 @@
     <a-assets>
       <video
         id="video360"
-        src="https://skymonte.drhole.com/s/srg5tQjw3oWMykX/download"
+        src="https://skymonte.drhole.com/s/BzPnw2agLmBz6Fj/download"
         crossorigin="anonymous"
         playsinline
         webkit-playsinline
         loop
         muted
+        preload="auto"
       ></video>
     </a-assets>
 
@@ -213,6 +225,9 @@
   <div id="playOverlay">
     <div id="playButton">Play 360° Ver189</div>
   </div>
+
+  <!-- Loading Overlay for buffering -->
+  <div id="loadingOverlay">Buffering...</div>
 
   <!-- Controls -->
   <div id="controls">
@@ -275,6 +290,7 @@
     // Main logic
     const video = document.querySelector('#video360');
     const playOverlay = document.getElementById('playOverlay');
+    const loadingOverlay = document.getElementById('loadingOverlay');
     const controls = document.getElementById('controls');
     const playPauseBtn = document.getElementById('playPauseBtn');
     const progress = document.getElementById('progress');
@@ -300,11 +316,14 @@
 
     function startPlayback() {
       video.muted = false;
-      video.play().then(() => playOverlay.style.display = 'none')
-        .catch(() => { 
-          video.muted = true; 
-          video.play().then(() => playOverlay.style.display = 'none'); 
-        });
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise.then(() => playOverlay.style.display = 'none')
+          .catch(() => { 
+            video.muted = true; 
+            video.play().then(() => playOverlay.style.display = 'none'); 
+          });
+      }
     }
 
     ['click','touchend','pointerup'].forEach(ev => {
@@ -353,6 +372,13 @@
     video.addEventListener('pause', () => { playPauseBtn.textContent = 'Play';  showControls(); });
     video.addEventListener('loadedmetadata', updateUI);
 
+    // Buffering indicators
+    video.addEventListener('waiting', () => { loadingOverlay.style.display = 'flex'; });
+    video.addEventListener('playing', () => { loadingOverlay.style.display = 'none'; });
+    video.addEventListener('seeking', () => { loadingOverlay.style.display = 'flex'; });
+    video.addEventListener('seeked', () => { loadingOverlay.style.display = 'none'; });
+
+    // Improved seek handling
     function seek(e) {
       e.preventDefault();
       if (!video.duration) return;
@@ -360,13 +386,31 @@
       const x = e.touches?.[0]?.clientX ?? e.clientX;
       let frac = (x - rect.left) / rect.width;
       frac = Math.max(0, Math.min(1, frac));
-      video.currentTime = frac * video.duration;
+      const targetTime = frac * video.duration;
+
+      video.pause();
+      video.currentTime = targetTime;
+      loadingOverlay.style.display = 'flex';
+
+      const onCanPlay = () => {
+        if (!video.paused) video.play();
+        loadingOverlay.style.display = 'none';
+        video.removeEventListener('canplay', onCanPlay);
+      };
+      video.addEventListener('canplay', onCanPlay);
+
       showControls();
     }
 
     progress.addEventListener('click', seek);
     progress.addEventListener('touchstart', seek, {passive: false});
     progress.addEventListener('touchmove', seek, {passive: false});
+
+    // Cap initial speed on mobile for smoother 4K playback
+    if (/Mobi|Android/i.test(navigator.userAgent)) {
+      video.playbackRate = 1;
+      speedSelect.value = '1';
+    }
   </script>
 </body>
 </html>
