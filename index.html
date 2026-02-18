@@ -22,115 +22,149 @@
     #playOverlay {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.7);
+      background: rgba(0,0,0,0.75);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 1000;
-      pointer-events: auto;
     }
     #playButton {
-      background: rgba(0,0,0,0.8);
-      color: white;
-      padding: 24px 60px;
+      background: rgba(0,0,0,0.85);
+      color: #fff;
+      padding: 22px 58px;
       border-radius: 60px;
-      font-size: 36px;
+      font-size: 34px;
       font-weight: bold;
-      box-shadow: 0 6px 30px rgba(0,255,80,0.4);
-      cursor: pointer;
+      box-shadow: 0 6px 28px rgba(0, 255, 120, 0.35);
+      border: 2px solid #00ff90;
       user-select: none;
-      border: 2px solid #00ff80;
     }
     #controls {
       position: fixed;
-      bottom: 16px;
+      bottom: 14px;
       left: 50%;
       transform: translateX(-50%);
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 12px 20px;
+      gap: 10px;
+      padding: 10px 18px;
       border-radius: 50px;
-      background: rgba(20,20,25,0.75);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
+      background: rgba(18, 18, 24, 0.82);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       z-index: 999;
-      max-width: 96%;
+      max-width: 98%;
       box-sizing: border-box;
-      transition: opacity 0.4s ease;
-      pointer-events: auto;
+      transition: opacity 0.35s ease, transform 0.35s ease;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
     }
     #controls.hidden {
       opacity: 0;
+      transform: translateX(-50%) translateY(20px);
       pointer-events: none;
     }
     button, select {
-      background: rgba(255,255,255,0.18);
-      color: white;
+      background: rgba(255,255,255,0.12);
+      color: #fff;
       border: none;
-      padding: 12px 18px;
+      padding: 10px 16px;
       border-radius: 999px;
       font-size: 15px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.18s;
+      transition: all 0.2s;
+      min-height: 44px;          /* better touch target */
       min-width: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       touch-action: manipulation;
     }
     button:hover, select:hover {
-      background: rgba(255,255,255,0.35);
-      transform: scale(1.06);
+      background: rgba(255,255,255,0.28);
+      transform: scale(1.08);
+    }
+    button:active, select:active {
+      transform: scale(0.96);
+      background: rgba(255,255,255,0.4);
+    }
+    #speedSelect {
+      background: rgba(0, 255, 140, 0.18);   /* accent hint when selected/fast */
+      color: #fff;
+      min-width: 68px;
+      padding: 10px 14px;
+    }
+    #speedSelect option {
+      background: #1a1a22;
+      color: #eee;
+    }
+    #speedSelect option:checked,
+    #speedSelect option[selected] {
+      background: #00c070;
+      color: #000;
     }
     #progressContainer {
       display: flex;
       align-items: center;
-      gap: 12px;
-      flex: 1;
+      gap: 10px;
+      flex: 1 1 auto;
     }
     #progress {
       flex: 1;
-      height: 10px;
-      background: rgba(255,255,255,0.25);
-      border-radius: 5px;
+      height: 8px;               /* thicker → easier to grab on mobile */
+      background: rgba(255,255,255,0.22);
+      border-radius: 4px;
       overflow: hidden;
       cursor: pointer;
-      min-width: 140px;
+      min-width: 120px;
     }
     #progressBar {
       width: 0%;
       height: 100%;
-      background: #00ff80;
-      transition: width 0.08s linear;
+      background: #00ff90;       /* bright green progress – visible on dark */
+      transition: width 0.1s linear;
     }
     #timeDisplay {
-      min-width: 90px;
+      min-width: 88px;
       text-align: center;
-      color: #eee;
+      color: #ddd;
       font-size: 14px;
       font-weight: 500;
     }
-    /* Mobile-first adjustments */
+    /* Mobile-first – tighter but bigger targets */
     @media (max-width: 640px) {
-      #playButton {
-        padding: 20px 50px;
-        font-size: 30px;
-      }
       #controls {
-        padding: 10px 16px;
-        gap: 10px;
+        padding: 8px 14px;
+        gap: 8px;
         bottom: 10px;
       }
       button, select {
         padding: 10px 14px;
         font-size: 14px;
-        min-width: 48px;
+        min-height: 42px;
+        min-width: 50px;
+      }
+      #speedSelect {
+        min-width: 64px;
       }
       #progress {
-        height: 8px;
+        height: 10px;            /* even thicker on small screens */
       }
       #timeDisplay {
         font-size: 13px;
-        min-width: 80px;
+        min-width: 78px;
+      }
+    }
+    @media (max-width: 380px) {
+      #controls {
+        flex-wrap: wrap;
+        justify-content: center;
+        padding: 10px;
+        gap: 8px 12px;
+      }
+      #progressContainer {
+        width: 100%;
+        order: -1;               /* move progress to top on tiny screens */
       }
     }
   </style>
@@ -149,10 +183,7 @@
       ></video>
     </a-assets>
 
-    <a-videosphere
-      src="#video360"
-      rotation="0 -90 0"
-    ></a-videosphere>
+    <a-videosphere src="#video360" rotation="0 -90 0"></a-videosphere>
 
     <a-entity
       id="cameraRig"
@@ -164,12 +195,10 @@
     ></a-entity>
   </a-scene>
 
-  <!-- Play Overlay -->
   <div id="playOverlay">
     <div id="playButton">Play 360° Ver3</div>
   </div>
 
-  <!-- Controls -->
   <div id="controls">
     <button id="playPauseBtn">Pause</button>
 
@@ -194,190 +223,126 @@
   </div>
 
   <script>
-    // ────────────────────────────────────────────────
-    // Register custom component to allow vertical touch look
-    // ────────────────────────────────────────────────
+    // Custom touch look (vertical + horizontal) – unchanged, works well
     AFRAME.registerComponent('custom-touch-look', {
-      schema: {
-        enabled: {default: true},
-        invertY: {default: false}
-      },
-
+      schema: { enabled: {default: true}, invertY: {default: false} },
       init: function () {
         this.isTouch = false;
-        this.startX = 0;
-        this.startY = 0;
+        this.startX = this.startY = 0;
         this.el.sceneEl.addEventListener('touchstart', this.onTouchStart.bind(this));
         this.el.sceneEl.addEventListener('touchmove', this.onTouchMove.bind(this));
-        this.el.sceneEl.addEventListener('touchend', this.onTouchEnd.bind(this));
+        this.el.sceneEl.addEventListener('touchend', () => this.isTouch = false);
       },
-
-      onTouchStart: function (e) {
-        if (e.touches.length !== 1) return;
-        this.isTouch = true;
-        this.startX = e.touches[0].clientX;
-        this.startY = e.touches[0].clientY;
-      },
-
+      onTouchStart: function (e) { if (e.touches.length === 1) { this.isTouch = true; this.startX = e.touches[0].clientX; this.startY = e.touches[0].clientY; } },
       onTouchMove: function (e) {
         if (!this.isTouch || e.touches.length !== 1) return;
-        e.preventDefault(); // prevent page scroll
-
+        e.preventDefault();
         const dx = e.touches[0].clientX - this.startX;
         const dy = e.touches[0].clientY - this.startY;
-
         const rig = this.el.object3D;
-        const sensitivity = 0.08;
-
-        // Horizontal (yaw)
-        rig.rotation.y -= dx * sensitivity;
-
-        // Vertical (pitch)
-        let pitch = rig.rotation.x - (this.data.invertY ? -dy : dy) * sensitivity;
-        pitch = Math.max(-85, Math.min(85, pitch)); // limit to avoid flipping
+        const sens = 0.085;
+        rig.rotation.y -= dx * sens;
+        let pitch = rig.rotation.x - (this.data.invertY ? -dy : dy) * sens * 0.9;
+        pitch = Math.max(-82, Math.min(82, pitch));
         rig.rotation.x = pitch;
-
         this.startX = e.touches[0].clientX;
         this.startY = e.touches[0].clientY;
-      },
-
-      onTouchEnd: function () {
-        this.isTouch = false;
       }
     });
 
-    // ────────────────────────────────────────────────
-    // Main logic
-    // ────────────────────────────────────────────────
-    const videoEl     = document.querySelector('#video360');
+    // ── Main logic ──────────────────────────────────────────────────────────────
+    const video = document.querySelector('#video360');
     const playOverlay = document.getElementById('playOverlay');
-    const controls    = document.getElementById('controls');
+    const controls = document.getElementById('controls');
     const playPauseBtn = document.getElementById('playPauseBtn');
-    const progress     = document.getElementById('progress');
-    const progressBar  = document.getElementById('progressBar');
-    const timeDisplay  = document.getElementById('timeDisplay');
-    const speedSelect  = document.getElementById('speedSelect');
-    const muteBtn      = document.getElementById('muteBtn');
-    const fsBtn        = document.getElementById('fsBtn');
+    const progress = document.getElementById('progress');
+    const progressBar = document.getElementById('progressBar');
+    const timeDisplay = document.getElementById('timeDisplay');
+    const speedSelect = document.getElementById('speedSelect');
+    const muteBtn = document.getElementById('muteBtn');
+    const fsBtn = document.getElementById('fsBtn');
 
-    let hideTimeout = null;
-    let isUserActive = false;
+    let hideTimer = null;
 
     function showControls() {
       controls.classList.remove('hidden');
-      clearTimeout(hideTimeout);
-      hideTimeout = setTimeout(() => {
-        if (!videoEl.paused) controls.classList.add('hidden');
-      }, 3200);
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(() => {
+        if (!video.paused && !document.fullscreenElement) controls.classList.add('hidden');
+      }, 3400);
     }
 
-    function onUserActivity() {
-      isUserActive = true;
-      showControls();
-      setTimeout(() => { isUserActive = false; }, 4000);
+    ['touchstart','click'].forEach(ev => {
+      document.querySelector('a-scene').addEventListener(ev, showControls, {passive: true});
+    });
+
+    // Play init
+    function startPlayback() {
+      video.muted = false;
+      video.play().then(() => playOverlay.style.display = 'none')
+        .catch(() => { video.muted = true; video.play().then(() => playOverlay.style.display = 'none'); });
     }
 
-    // Show controls on any touch / click in scene
-    document.querySelector('a-scene').addEventListener('touchstart', onUserActivity, {passive: true});
-    document.querySelector('a-scene').addEventListener('click', onUserActivity);
-
-    // ── Play start logic ───────────────────────────────────────
-    function tryPlay() {
-      if (!videoEl) return;
-      videoEl.muted = false;
-      const promise = videoEl.play();
-      if (promise !== undefined) {
-        promise.then(() => {
-          playOverlay.style.display = 'none';
-        }).catch(() => {
-          // iOS / policy → try muted fallback
-          videoEl.muted = true;
-          videoEl.play().then(() => {
-            playOverlay.style.display = 'none';
-          });
-        });
-      }
-    }
-
-    // Multiple events for stubborn mobile browsers
     ['click','touchend','pointerup'].forEach(ev => {
-      playOverlay.addEventListener(ev, tryPlay, {once: true, passive: false});
-      document.addEventListener(ev, tryPlay, {once: true, passive: false});
+      playOverlay.addEventListener(ev, startPlayback, {once: true, passive: false});
+      document.addEventListener(ev, startPlayback, {once: true, passive: false});
     });
 
-    // ── Controls listeners ─────────────────────────────────────
-    playPauseBtn.addEventListener('click', () => {
-      if (videoEl.paused) {
-        videoEl.play();
-        playPauseBtn.textContent = 'Pause';
-      } else {
-        videoEl.pause();
-        playPauseBtn.textContent = 'Play';
-      }
+    // Controls
+    playPauseBtn.onclick = () => {
+      video[video.paused ? 'play' : 'pause']();
+      playPauseBtn.textContent = video.paused ? 'Play' : 'Pause';
       showControls();
-    });
+    };
 
-    speedSelect.addEventListener('change', () => {
-      videoEl.playbackRate = parseFloat(speedSelect.value);
+    speedSelect.onchange = () => { video.playbackRate = +speedSelect.value; showControls(); };
+
+    muteBtn.onclick = () => {
+      video.muted = !video.muted;
+      muteBtn.textContent = video.muted ? 'Unmute' : 'Mute';
       showControls();
-    });
+    };
 
-    muteBtn.addEventListener('click', () => {
-      videoEl.muted = !videoEl.muted;
-      muteBtn.textContent = videoEl.muted ? 'Unmute' : 'Mute';
+    fsBtn.onclick = () => {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+      else document.exitFullscreen?.();
       showControls();
-    });
+    };
 
-    fsBtn.addEventListener('click', () => {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen?.() ||
-        document.documentElement.webkitRequestFullscreen?.();
-      } else {
-        document.exitFullscreen?.() ||
-        document.webkitExitFullscreen?.();
-      }
-      showControls();
-    });
-
-    // Progress
-    function updateProgress() {
-      if (!videoEl.duration) return;
-      const pct = (videoEl.currentTime / videoEl.duration) * 100;
+    // Progress & time
+    function updateUI() {
+      if (!video.duration) return;
+      const pct = (video.currentTime / video.duration) * 100;
       progressBar.style.width = pct + '%';
-
-      const cur = formatTime(videoEl.currentTime);
-      const dur = formatTime(videoEl.duration);
-      timeDisplay.textContent = `${cur} / ${dur}`;
+      timeDisplay.textContent = `${format(video.currentTime)} / ${format(video.duration)}`;
     }
 
-    function formatTime(s) {
+    function format(s) {
       const m = Math.floor(s / 60);
       const sec = Math.floor(s % 60);
       return `${m}:${sec.toString().padStart(2,'0')}`;
     }
 
-    videoEl.addEventListener('timeupdate', updateProgress);
-    videoEl.addEventListener('play',  () => { playPauseBtn.textContent = 'Pause'; showControls(); });
-    videoEl.addEventListener('pause', () => { playPauseBtn.textContent = 'Play';  showControls(); });
+    video.addEventListener('timeupdate', updateUI);
+    video.addEventListener('play',  () => { playPauseBtn.textContent = 'Pause'; showControls(); });
+    video.addEventListener('pause', () => { playPauseBtn.textContent = 'Play';  showControls(); });
+    video.addEventListener('loadedmetadata', updateUI);
 
     // Seek
     function seek(e) {
       e.preventDefault();
-      if (!videoEl.duration) return;
+      if (!video.duration) return;
       const rect = progress.getBoundingClientRect();
       const x = e.touches?.[0]?.clientX ?? e.clientX;
-      let pos = (x - rect.left) / rect.width;
-      pos = Math.max(0, Math.min(1, pos));
-      videoEl.currentTime = pos * videoEl.duration;
+      let frac = (x - rect.left) / rect.width;
+      frac = Math.max(0, Math.min(1, frac));
+      video.currentTime = frac * video.duration;
       showControls();
     }
 
     progress.addEventListener('click', seek);
     progress.addEventListener('touchstart', seek, {passive: false});
     progress.addEventListener('touchmove', seek, {passive: false});
-
-    // Initial update
-    videoEl.addEventListener('loadedmetadata', updateProgress);
   </script>
 </body>
 </html>
