@@ -48,7 +48,7 @@
       flex-wrap: wrap;
       justify-content: center;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       padding: 10px 16px;
       border-radius: 40px;
       background: rgba(0,0,0,0.65);
@@ -84,13 +84,17 @@
     }
     #progress {
       width: 240px;
-      height: 20px;
+      height: 24px;
       background: rgba(255,255,255,0.2);
-      border-radius: 10px;
+      border-radius: 12px;
       overflow: hidden;
       cursor: pointer;
       touch-action: manipulation;
       border: 1px solid rgba(255,255,255,0.1);
+      transition: box-shadow 0.2s;
+    }
+    #progress:active, #progress.dragging {
+      box-shadow: 0 0 15px rgba(0,255,0,0.5);
     }
     #progressBar {
       width: 0%;
@@ -102,7 +106,6 @@
       min-width: 80px;
       text-align: center;
     }
-
     /* Mobile optimizations */
     @media (max-width: 600px) {
       #playButton {
@@ -113,8 +116,6 @@
         padding: 10px 14px;
         gap: 8px;
         bottom: 12px;
-        flex-direction: row;
-        flex-wrap: wrap;
       }
       button, select {
         padding: 8px 12px;
@@ -122,7 +123,7 @@
       }
       #progress {
         width: 180px;
-        height: 18px;
+        height: 22px;
       }
       #timeDisplay {
         font-size: 12px;
@@ -157,7 +158,7 @@
     <div id="playButton">Play 360° Video</div>
   </div>
 
-  <!-- Controls Bar (always visible) -->
+  <!-- Controls Bar -->
   <div id="controls">
     <button id="playPauseBtn">Pause</button>
     <div id="progressContainer">
@@ -189,6 +190,7 @@
     const muteBtn = document.getElementById('muteBtn');
 
     let video = null;
+    let isDragging = false;
 
     // Wait for video to load
     sphere.addEventListener('materialtextureloaded', () => {
@@ -243,8 +245,18 @@
 
     // Progress seek
     progress.addEventListener('click', seek);
-    progress.addEventListener('touchstart', seek);
-    progress.addEventListener('touchmove', seek);
+    progress.addEventListener('touchstart', (e) => {
+      isDragging = true;
+      progress.classList.add('dragging');
+      seek(e);
+    });
+    progress.addEventListener('touchmove', (e) => {
+      if (isDragging) seek(e);
+    });
+    progress.addEventListener('touchend', () => {
+      isDragging = false;
+      progress.classList.remove('dragging');
+    });
 
     function seek(e) {
       if (video && video.duration) {
