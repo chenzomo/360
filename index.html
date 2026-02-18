@@ -113,7 +113,8 @@
       text-align: center;
       gap: 10px;
     }
-    #loadingOverlay span { font-size: 18px; opacity: 0.8; }
+    #loadingOverlay.error { background: rgba(200,0,0,0.8); }
+    #loadingOverlay span { font-size: 18px; opacity: 0.9; }
 
     @media (max-width: 640px) {
       #controls { padding: 8px 16px; gap: 8px; bottom: calc(8px + var(--safe-bottom)); }
@@ -158,7 +159,7 @@
 
   <div id="playOverlay">
     <div id="playButton">Play 360° Ver209</div>
-    <span style="margin-top:20px; font-size:16px; opacity:0.8;">(If stuck on buffering, hosting may not support progressive streaming)</span>
+    <span style="margin-top:20px; font-size:16px; opacity:0.8;">(Buffering stuck? Likely hosting – test with YouTube upload for comparison)</span>
   </div>
 
   <div id="loadingOverlay">
@@ -249,7 +250,8 @@
       const playPromise = video.play();
       if (playPromise !== undefined) {
         playPromise.then(() => playOverlay.style.display = 'none')
-          .catch(() => {
+          .catch(err => {
+            console.error('Play failed:', err);
             video.muted = true;
             video.play().then(() => playOverlay.style.display = 'none');
           });
@@ -259,6 +261,30 @@
     ['click','touchend','pointerup'].forEach(ev => {
       playOverlay.addEventListener(ev, startPlayback, {once: true, passive: false});
       document.addEventListener(ev, startPlayback, {once: true, passive: false});
+    });
+
+    // Error handling
+    video.addEventListener('error', (e) => {
+      console.error('Video error:', e.target.error);
+      loadingOverlay.innerHTML = 'Video failed to load<br><span>Check console (F12) for details – likely hosting/range issue</span>';
+      loadingOverlay.classList.add('error');
+      loadingOverlay.style.display = 'flex';
+    });
+
+    video.addEventListener('waiting', () => { loadingOverlay.style.display = 'flex'; });
+    video.addEventListener('stalled', () => { loadingOverlay.style.display = 'flex'; });
+    video.addEventListener('suspend', () => { loadingOverlay.style.display = 'flex'; });
+    video.addEventListener('playing', () => { loadingOverlay.style.display = 'none'; });
+    video.addEventListener('seeked', () => { loadingOverlay.style.display = 'none'; });
+    video.addEventListener('canplaythrough', () => { loadingOverlay.style.display = 'none'; });
+
+    // Timeout if stuck too long
+    video.addEventListener('waiting', () => {
+      setTimeout(() => {
+        if (loadingOverlay.style.display === 'flex' && !video.paused) {
+          loadingOverlay.querySelector('span').textContent = 'Still buffering after 15s – server may not support progressive video loading';
+        }
+      }, 15000);
     });
 
     playPauseBtn.onclick = () => {
@@ -301,13 +327,6 @@
     video.addEventListener('play', () => { playPauseBtn.textContent = 'Pause'; showControls(); });
     video.addEventListener('pause', () => { playPauseBtn.textContent = 'Play'; showControls(); });
     video.addEventListener('loadedmetadata', updateUI);
-
-    video.addEventListener('waiting', () => { loadingOverlay.style.display = 'flex'; });
-    video.addEventListener('stalled', () => { loadingOverlay.style.display = 'flex'; });
-    video.addEventListener('suspend', () => { loadingOverlay.style.display = 'flex'; });
-    video.addEventListener('playing', () => { loadingOverlay.style.display = 'none'; });
-    video.addEventListener('seeked', () => { loadingOverlay.style.display = 'none'; });
-    video.addEventListener('canplaythrough', () => { loadingOverlay.style.display = 'none'; });
 
     function seek(e) {
       e.preventDefault();
