@@ -18,15 +18,21 @@
       width: 100vw;
       height: 100vh;
     }
-    #playOverlay {
+    #playOverlay, #controls {
       position: fixed;
-      inset: 0;
+      left: 0;
+      width: 100%;
+      z-index: 1000;
+      pointer-events: auto;
+      transition: opacity 0.3s;
+    }
+    #playOverlay {
+      top: 0;
+      height: 100%;
       background: rgba(0,0,0,0.6);
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 1000;
-      pointer-events: auto;
     }
     #playButton {
       background: black;
@@ -40,97 +46,46 @@
       user-select: none;
     }
     #controls {
-      position: fixed;
-      bottom: 16px;
-      left: 50%;
-      transform: translateX(-50%);
+      bottom: 20px;
       display: flex;
-      flex-wrap: wrap;
       justify-content: center;
       align-items: center;
-      gap: 10px;
-      padding: 10px 16px;
-      border-radius: 40px;
-      background: rgba(0,0,0,0.65);
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(255,255,255,0.1);
-      z-index: 999;
-      max-width: 95%;
-      box-sizing: border-box;
+      gap: 15px;
+      opacity: 0;
+      background: rgba(0,0,0,0.5);
+      padding: 10px 20px;
+      border-radius: 30px;
+      transition: opacity 0.5s;
+    }
+    #controls.visible {
+      opacity: 1;
     }
     button, select {
-      background: rgba(255,255,255,0.15);
-      color: white;
-      border: 1px solid rgba(255,255,255,0.2);
-      padding: 10px 14px;
-      border-radius: 999px;
-      font-size: 15px;
-      font-weight: 600;
+      background: rgba(255,255,255,0.9);
+      color: black;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 30px;
+      font-size: 16px;
       cursor: pointer;
-      transition: all 0.2s;
-      backdrop-filter: blur(5px);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.4);
     }
     button:hover, select:hover {
-      background: rgba(255,255,255,0.3);
-      transform: scale(1.05);
-    }
-    #progressContainer {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      color: #ddd;
-      font-size: 13px;
-      font-weight: 500;
+      background: white;
     }
     #progress {
-      width: 240px;
-      height: 24px;
-      background: rgba(255,255,255,0.2);
-      border-radius: 12px;
+      width: 300px;
+      height: 6px;
+      background: rgba(255,255,255,0.3);
+      border-radius: 3px;
       overflow: hidden;
       cursor: pointer;
-      touch-action: manipulation;
-      border: 1px solid rgba(255,255,255,0.1);
-      transition: box-shadow 0.2s;
-    }
-    #progress:active, #progress.dragging {
-      box-shadow: 0 0 15px rgba(0,255,0,0.5);
     }
     #progressBar {
       width: 0%;
       height: 100%;
-      background: #00ff00;
+      background: #4CAF50;
       transition: width 0.1s linear;
-    }
-    #timeDisplay {
-      min-width: 80px;
-      text-align: center;
-    }
-    /* Mobile optimizations */
-    @media (max-width: 600px) {
-      #playButton {
-        padding: 18px 45px;
-        font-size: 28px;
-      }
-      #controls {
-        padding: 10px 14px;
-        gap: 8px;
-        bottom: 12px;
-      }
-      button, select {
-        padding: 8px 12px;
-        font-size: 14px;
-      }
-      #progress {
-        width: 180px;
-        height: 22px;
-      }
-      #timeDisplay {
-        font-size: 12px;
-      }
-      #progressContainer {
-        gap: 8px;
-      }
     }
   </style>
 </head>
@@ -144,7 +99,6 @@
       playsinline
       crossorigin="anonymous">
     </a-videosphere>
-
     <a-entity
       camera
       look-controls
@@ -155,25 +109,22 @@
 
   <!-- Play Overlay -->
   <div id="playOverlay">
-    <div id="playButton">Play 360° Video</div>
+    <div id="playButton">Play 360° Ver2</div>
   </div>
 
   <!-- Controls Bar -->
   <div id="controls">
     <button id="playPauseBtn">Pause</button>
-    <div id="progressContainer">
-      <div id="timeDisplay">0:00 / 0:00</div>
-      <div id="progress">
-        <div id="progressBar"></div>
-      </div>
+    <div id="progress">
+      <div id="progressBar"></div>
     </div>
     <select id="speedSelect">
-      <option value="0.75">0.75×</option>
-      <option value="1" selected>1×</option>
-      <option value="1.5">1.5×</option>
-      <option value="2">2×</option>
-      <option value="2.5">2.5×</option>
-      <option value="3">3×</option>
+      <option value="0.75">0.75x</option>
+      <option value="1" selected>1x</option>
+      <option value="1.5">1.5x</option>
+      <option value="2">2x</option>
+      <option value="2.5">2.5x</option>
+      <option value="3">3x</option>
     </select>
     <button id="muteBtn">Mute</button>
   </div>
@@ -185,12 +136,10 @@
     const playPauseBtn = document.getElementById('playPauseBtn');
     const progress = document.getElementById('progress');
     const progressBar = document.getElementById('progressBar');
-    const timeDisplay = document.getElementById('timeDisplay');
     const speedSelect = document.getElementById('speedSelect');
     const muteBtn = document.getElementById('muteBtn');
 
     let video = null;
-    let isDragging = false;
 
     // Wait for video to load
     sphere.addEventListener('materialtextureloaded', () => {
@@ -199,6 +148,7 @@
         video.addEventListener('timeupdate', updateProgress);
         video.addEventListener('play', () => {
           playPauseBtn.textContent = 'Pause';
+          controls.classList.add('visible');
         });
         video.addEventListener('pause', () => {
           playPauseBtn.textContent = 'Play';
@@ -206,23 +156,47 @@
         video.addEventListener('ended', () => {
           playPauseBtn.textContent = 'Play';
         });
-        updateProgress();
       }
     });
 
-    // Start video on first tap/click
-    function startVideo() {
+    // Start video on first interaction (enhanced for mobile)
+    function startVideo(e) {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
       if (video && video.paused) {
         video.muted = false;
-        video.play().catch(err => console.log('Play failed:', err));
-        playOverlay.style.display = 'none';
+        const playPromise = video.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              playOverlay.style.display = 'none';
+            })
+            .catch(err => {
+              console.log('Play failed:', err);
+              // Fallback: muted play + force hide
+              video.muted = true;
+              video.play();
+              playOverlay.style.display = 'none';
+            });
+        } else {
+          // Direct play fallback
+          video.play();
+          playOverlay.style.display = 'none';
+        }
       }
+      // Safety timeout: hide overlay after 2 seconds if play didn't trigger
+      setTimeout(() => {
+        playOverlay.style.display = 'none';
+      }, 2000);
     }
 
-    document.addEventListener('click', startVideo, { once: true });
-    document.addEventListener('touchend', startVideo, { once: true });
-    playOverlay.addEventListener('click', startVideo);
-    playOverlay.addEventListener('touchend', startVideo);
+    // Attach multiple events for reliability on iOS
+    ['click', 'touchend', 'pointerup', 'pointerdown'].forEach(event => {
+      document.addEventListener(event, startVideo, { once: true, passive: false });
+      playOverlay.addEventListener(event, startVideo, { passive: false });
+    });
 
     // Play/Pause
     playPauseBtn.addEventListener('click', () => {
@@ -243,313 +217,14 @@
       }
     });
 
-    // Progress seek
+    // Progress seek (click + touch)
     progress.addEventListener('click', seek);
-    progress.addEventListener('touchstart', (e) => {
-      isDragging = true;
-      progress.classList.add('dragging');
-      seek(e);
-    });
-    progress.addEventListener('touchmove', (e) => {
-      if (isDragging) seek(e);
-    });
-    progress.addEventListener('touchend', () => {
-      isDragging = false;
-      progress.classList.remove('dragging');
-    });
+    progress.addEventListener('touchstart', seek, { passive: false });
+    progress.addEventListener('touchmove', seek, { passive: false });
 
     function seek(e) {
+      if (e) e.preventDefault();
       if (video && video.duration) {
-        e.preventDefault();
-        const rect = progress.getBoundingClientRect();
-        const x = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
-        const pos = Math.max(0, Math.min(1, (x - rect.left) / rect.width));
-        video.currentTime = pos * video.duration;
-      }
-    }
-
-    function updateProgress() {
-      if (video && video.duration) {
-        const current = formatTime(video.currentTime);
-        const total = formatTime(video.duration);
-        timeDisplay.textContent = `${current} / ${total}`;
-
-        const percent = (video.currentTime / video.duration) * 100;
-        progressBar.style.width = percent + '%';
-      }
-    }
-
-    function formatTime(seconds) {
-      const mins = Math.floor(seconds / 60);
-      const secs = Math.floor(seconds % 60);
-      return `${mins}:${secs.toString().padStart(2, '0')}`;
-    }
-  </script>
-</body>
-</html>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>360° Video Viewer - JumpinJack</title>
-  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
-  <style>
-    body, html {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      overflow: hidden;
-      background: #000;
-      font-family: Arial, sans-serif;
-    }
-    a-scene {
-      width: 100vw;
-      height: 100vh;
-    }
-    #playOverlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.6);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-      pointer-events: auto;
-    }
-    #playButton {
-      background: black;
-      color: white;
-      padding: 20px 50px;
-      border-radius: 50px;
-      font-size: 32px;
-      font-weight: bold;
-      box-shadow: 0 4px 20px rgba(255,255,255,0.3);
-      cursor: pointer;
-      user-select: none;
-    }
-    #controls {
-      position: fixed;
-      bottom: 16px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 16px;
-      border-radius: 40px;
-      background: rgba(0,0,0,0.65);
-      backdrop-filter: blur(8px);
-      border: 1px solid rgba(255,255,255,0.1);
-      z-index: 999;
-      max-width: 95%;
-      box-sizing: border-box;
-    }
-    button, select {
-      background: rgba(255,255,255,0.15);
-      color: white;
-      border: 1px solid rgba(255,255,255,0.2);
-      padding: 10px 14px;
-      border-radius: 999px;
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-      backdrop-filter: blur(5px);
-    }
-    button:hover, select:hover {
-      background: rgba(255,255,255,0.3);
-      transform: scale(1.05);
-    }
-    #progressContainer {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      color: #ddd;
-      font-size: 13px;
-      font-weight: 500;
-    }
-    #progress {
-      width: 240px;
-      height: 24px;
-      background: rgba(255,255,255,0.2);
-      border-radius: 12px;
-      overflow: hidden;
-      cursor: pointer;
-      touch-action: manipulation;
-      border: 1px solid rgba(255,255,255,0.1);
-      transition: box-shadow 0.2s;
-    }
-    #progress:active, #progress.dragging {
-      box-shadow: 0 0 15px rgba(0,255,0,0.5);
-    }
-    #progressBar {
-      width: 0%;
-      height: 100%;
-      background: #00ff00;
-      transition: width 0.1s linear;
-    }
-    #timeDisplay {
-      min-width: 80px;
-      text-align: center;
-    }
-    /* Mobile optimizations */
-    @media (max-width: 600px) {
-      #playButton {
-        padding: 18px 45px;
-        font-size: 28px;
-      }
-      #controls {
-        padding: 10px 14px;
-        gap: 8px;
-        bottom: 12px;
-      }
-      button, select {
-        padding: 8px 12px;
-        font-size: 14px;
-      }
-      #progress {
-        width: 180px;
-        height: 22px;
-      }
-      #timeDisplay {
-        font-size: 12px;
-      }
-      #progressContainer {
-        gap: 8px;
-      }
-    }
-  </style>
-</head>
-<body>
-  <a-scene embedded>
-    <a-videosphere
-      id="videoSphere"
-      src="https://skymonte.drhole.com/s/srg5tQjw3oWMykX/download"
-      rotation="0 -90 0"
-      loop="true"
-      playsinline
-      crossorigin="anonymous">
-    </a-videosphere>
-
-    <a-entity
-      camera
-      look-controls
-      wasd-controls
-      position="0 1.6 0">
-    </a-entity>
-  </a-scene>
-
-  <!-- Play Overlay -->
-  <div id="playOverlay">
-    <div id="playButton">Play 360° Video</div>
-  </div>
-
-  <!-- Controls Bar -->
-  <div id="controls">
-    <button id="playPauseBtn">Pause</button>
-    <div id="progressContainer">
-      <div id="timeDisplay">0:00 / 0:00</div>
-      <div id="progress">
-        <div id="progressBar"></div>
-      </div>
-    </div>
-    <select id="speedSelect">
-      <option value="0.75">0.75×</option>
-      <option value="1" selected>1×</option>
-      <option value="1.5">1.5×</option>
-      <option value="2">2×</option>
-      <option value="2.5">2.5×</option>
-      <option value="3">3×</option>
-    </select>
-    <button id="muteBtn">Mute</button>
-  </div>
-
-  <script>
-    const playOverlay = document.getElementById('playOverlay');
-    const controls = document.getElementById('controls');
-    const sphere = document.querySelector('#videoSphere');
-    const playPauseBtn = document.getElementById('playPauseBtn');
-    const progress = document.getElementById('progress');
-    const progressBar = document.getElementById('progressBar');
-    const timeDisplay = document.getElementById('timeDisplay');
-    const speedSelect = document.getElementById('speedSelect');
-    const muteBtn = document.getElementById('muteBtn');
-
-    let video = null;
-    let isDragging = false;
-
-    // Wait for video to load
-    sphere.addEventListener('materialtextureloaded', () => {
-      video = sphere.components.material.material.map.image;
-      if (video) {
-        video.addEventListener('timeupdate', updateProgress);
-        video.addEventListener('play', () => {
-          playPauseBtn.textContent = 'Pause';
-        });
-        video.addEventListener('pause', () => {
-          playPauseBtn.textContent = 'Play';
-        });
-        video.addEventListener('ended', () => {
-          playPauseBtn.textContent = 'Play';
-        });
-        updateProgress();
-      }
-    });
-
-    // Start video on first tap/click
-    function startVideo() {
-      if (video && video.paused) {
-        video.muted = false;
-        video.play().catch(err => console.log('Play failed:', err));
-        playOverlay.style.display = 'none';
-      }
-    }
-
-    document.addEventListener('click', startVideo, { once: true });
-    document.addEventListener('touchend', startVideo, { once: true });
-    playOverlay.addEventListener('click', startVideo);
-    playOverlay.addEventListener('touchend', startVideo);
-
-    // Play/Pause
-    playPauseBtn.addEventListener('click', () => {
-      if (video.paused) video.play();
-      else video.pause();
-    });
-
-    // Speed
-    speedSelect.addEventListener('change', () => {
-      if (video) video.playbackRate = parseFloat(speedSelect.value);
-    });
-
-    // Mute/Unmute
-    muteBtn.addEventListener('click', () => {
-      if (video) {
-        video.muted = !video.muted;
-        muteBtn.textContent = video.muted ? 'Unmute' : 'Mute';
-      }
-    });
-
-    // Progress seek
-    progress.addEventListener('click', seek);
-    progress.addEventListener('touchstart', (e) => {
-      isDragging = true;
-      progress.classList.add('dragging');
-      seek(e);
-    });
-    progress.addEventListener('touchmove', (e) => {
-      if (isDragging) seek(e);
-    });
-    progress.addEventListener('touchend', () => {
-      isDragging = false;
-      progress.classList.remove('dragging');
-    });
-
-    function seek(e) {
-      if (video && video.duration) {
-        e.preventDefault();
         const rect = progress.getBoundingClientRect();
         const x = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
         const pos = Math.max(0, Math.min(1, (x - rect.left) / rect.width));
