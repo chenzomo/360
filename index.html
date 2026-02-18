@@ -6,6 +6,11 @@
   <title>360° Video Viewer - JumpinJack</title>
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
   <style>
+    :root {
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-bottom-fallback: 20px;
+    }
+
     body, html {
       margin: 0;
       padding: 0;
@@ -14,6 +19,7 @@
       background: #000;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       touch-action: manipulation;
+      padding-bottom: calc(var(--safe-bottom) + var(--safe-bottom-fallback));
     }
     a-scene {
       width: 100vw;
@@ -27,6 +33,8 @@
       align-items: center;
       justify-content: center;
       z-index: 1000;
+      padding-bottom: var(--safe-bottom);
+      box-sizing: border-box;
     }
     #playButton {
       background: rgba(0,0,0,0.85);
@@ -41,13 +49,13 @@
     }
     #controls {
       position: fixed;
-      bottom: 14px;
+      bottom: calc(10px + var(--safe-bottom));
       left: 50%;
       transform: translateX(-50%);
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 10px 18px;
+      padding: 10px 20px;
       border-radius: 50px;
       background: rgba(18, 18, 24, 0.82);
       backdrop-filter: blur(12px);
@@ -57,6 +65,7 @@
       box-sizing: border-box;
       transition: opacity 0.35s ease, transform 0.35s ease;
       box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      min-height: 54px;
     }
     #controls.hidden {
       opacity: 0;
@@ -73,7 +82,7 @@
       font-weight: 600;
       cursor: pointer;
       transition: all 0.2s;
-      min-height: 44px;          /* better touch target */
+      min-height: 44px;
       min-width: 54px;
       display: flex;
       align-items: center;
@@ -89,7 +98,7 @@
       background: rgba(255,255,255,0.4);
     }
     #speedSelect {
-      background: rgba(0, 255, 140, 0.18);   /* accent hint when selected/fast */
+      background: rgba(0, 255, 140, 0.18);
       color: #fff;
       min-width: 68px;
       padding: 10px 14px;
@@ -111,7 +120,7 @@
     }
     #progress {
       flex: 1;
-      height: 8px;               /* thicker → easier to grab on mobile */
+      height: 8px;
       background: rgba(255,255,255,0.22);
       border-radius: 4px;
       overflow: hidden;
@@ -121,7 +130,7 @@
     #progressBar {
       width: 0%;
       height: 100%;
-      background: #00ff90;       /* bright green progress – visible on dark */
+      background: #00ff90;
       transition: width 0.1s linear;
     }
     #timeDisplay {
@@ -131,40 +140,45 @@
       font-size: 14px;
       font-weight: 500;
     }
-    /* Mobile-first – tighter but bigger targets */
+
+    /* Mobile adjustments */
     @media (max-width: 640px) {
       #controls {
-        padding: 8px 14px;
+        padding: 8px 16px;
         gap: 8px;
-        bottom: 10px;
+        bottom: calc(8px + var(--safe-bottom));
       }
       button, select {
         padding: 10px 14px;
         font-size: 14px;
-        min-height: 42px;
+        min-height: 44px;
         min-width: 50px;
       }
       #speedSelect {
         min-width: 64px;
       }
       #progress {
-        height: 10px;            /* even thicker on small screens */
+        height: 10px;
       }
       #timeDisplay {
         font-size: 13px;
         min-width: 78px;
       }
     }
+
     @media (max-width: 380px) {
       #controls {
+        padding: 10px 12px;
         flex-wrap: wrap;
         justify-content: center;
-        padding: 10px;
-        gap: 8px 12px;
+        gap: 8px 10px;
       }
       #progressContainer {
         width: 100%;
-        order: -1;               /* move progress to top on tiny screens */
+        order: -1;
+      }
+      #timeDisplay {
+        min-width: 70px;
       }
     }
   </style>
@@ -195,10 +209,12 @@
     ></a-entity>
   </a-scene>
 
+  <!-- Play Overlay -->
   <div id="playOverlay">
-    <div id="playButton">Play 360° Ver3</div>
+    <div id="playButton">Play 360° Ver189</div>
   </div>
 
+  <!-- Controls -->
   <div id="controls">
     <button id="playPauseBtn">Pause</button>
 
@@ -223,7 +239,7 @@
   </div>
 
   <script>
-    // Custom touch look (vertical + horizontal) – unchanged, works well
+    // Custom touch look component
     AFRAME.registerComponent('custom-touch-look', {
       schema: { enabled: {default: true}, invertY: {default: false} },
       init: function () {
@@ -233,7 +249,13 @@
         this.el.sceneEl.addEventListener('touchmove', this.onTouchMove.bind(this));
         this.el.sceneEl.addEventListener('touchend', () => this.isTouch = false);
       },
-      onTouchStart: function (e) { if (e.touches.length === 1) { this.isTouch = true; this.startX = e.touches[0].clientX; this.startY = e.touches[0].clientY; } },
+      onTouchStart: function (e) { 
+        if (e.touches.length === 1) { 
+          this.isTouch = true; 
+          this.startX = e.touches[0].clientX; 
+          this.startY = e.touches[0].clientY; 
+        } 
+      },
       onTouchMove: function (e) {
         if (!this.isTouch || e.touches.length !== 1) return;
         e.preventDefault();
@@ -250,7 +272,7 @@
       }
     });
 
-    // ── Main logic ──────────────────────────────────────────────────────────────
+    // Main logic
     const video = document.querySelector('#video360');
     const playOverlay = document.getElementById('playOverlay');
     const controls = document.getElementById('controls');
@@ -276,11 +298,13 @@
       document.querySelector('a-scene').addEventListener(ev, showControls, {passive: true});
     });
 
-    // Play init
     function startPlayback() {
       video.muted = false;
       video.play().then(() => playOverlay.style.display = 'none')
-        .catch(() => { video.muted = true; video.play().then(() => playOverlay.style.display = 'none'); });
+        .catch(() => { 
+          video.muted = true; 
+          video.play().then(() => playOverlay.style.display = 'none'); 
+        });
     }
 
     ['click','touchend','pointerup'].forEach(ev => {
@@ -288,14 +312,16 @@
       document.addEventListener(ev, startPlayback, {once: true, passive: false});
     });
 
-    // Controls
     playPauseBtn.onclick = () => {
       video[video.paused ? 'play' : 'pause']();
       playPauseBtn.textContent = video.paused ? 'Play' : 'Pause';
       showControls();
     };
 
-    speedSelect.onchange = () => { video.playbackRate = +speedSelect.value; showControls(); };
+    speedSelect.onchange = () => { 
+      video.playbackRate = +speedSelect.value; 
+      showControls(); 
+    };
 
     muteBtn.onclick = () => {
       video.muted = !video.muted;
@@ -309,7 +335,6 @@
       showControls();
     };
 
-    // Progress & time
     function updateUI() {
       if (!video.duration) return;
       const pct = (video.currentTime / video.duration) * 100;
@@ -328,7 +353,6 @@
     video.addEventListener('pause', () => { playPauseBtn.textContent = 'Play';  showControls(); });
     video.addEventListener('loadedmetadata', updateUI);
 
-    // Seek
     function seek(e) {
       e.preventDefault();
       if (!video.duration) return;
