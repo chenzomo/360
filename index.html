@@ -18,49 +18,55 @@
       width: 100vw;
       height: 100vh;
     }
-    #playOverlay, #controls {
+    #playOverlay, #controls, #toggleBtn {
       position: fixed;
-      left: 0;
-      width: 100%;
       z-index: 1000;
       pointer-events: auto;
-      transition: opacity 0.3s;
+      transition: opacity 0.4s ease;
     }
     #playOverlay {
       top: 0;
+      left: 0;
+      width: 100%;
       height: 100%;
-      background: rgba(0,0,0,0.6);
+      background: rgba(0,0,0,0.7);
       display: flex;
       align-items: center;
       justify-content: center;
     }
     #playButton {
-      background: white;
+      background: rgba(255,255,255,0.9);
       color: black;
-      padding: 20px 50px;
-      border-radius: 50px;
-      font-size: 32px;
+      padding: 25px 60px;
+      border-radius: 60px;
+      font-size: 36px;
       font-weight: bold;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      box-shadow: 0 6px 25px rgba(0,0,0,0.6);
       cursor: pointer;
       user-select: none;
     }
     #controls {
       bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
       display: flex;
-      justify-content: center;
       align-items: center;
       gap: 15px;
-      opacity: 0;
-      background: rgba(0,0,0,0.5);
-      padding: 10px 20px;
-      border-radius: 30px;
-      transition: opacity 0.5s;
+      padding: 12px 24px;
+      border-radius: 40px;
+      background: rgba(0,0,0,0.4); /* semi-transparent by default */
+      opacity: 0.4;
+      transition: opacity 0.4s ease, background 0.3s;
     }
     #controls.visible {
-      opacity: 1;
+      opacity: 0.8;
+      background: rgba(0,0,0,0.65);
     }
-    button, select {
+    #controls:hover, #controls:active {
+      opacity: 1 !important;
+      background: rgba(0,0,0,0.8);
+    }
+    button, select, input[type="range"] {
       background: rgba(255,255,255,0.9);
       color: black;
       border: none;
@@ -74,10 +80,10 @@
       background: white;
     }
     #progress {
-      width: 300px;
-      height: 6px;
+      width: 280px;
+      height: 8px;
       background: rgba(255,255,255,0.3);
-      border-radius: 3px;
+      border-radius: 4px;
       overflow: hidden;
       cursor: pointer;
     }
@@ -86,6 +92,29 @@
       height: 100%;
       background: #4CAF50;
       transition: width 0.1s linear;
+    }
+    #zoomContainer {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: white;
+      font-size: 14px;
+    }
+    input[type="range"] {
+      width: 120px;
+      accent-color: #4CAF50;
+    }
+    #toggleBtn {
+      top: 15px;
+      right: 15px;
+      background: rgba(255,255,255,0.8);
+      color: black;
+      padding: 8px 16px;
+      border-radius: 30px;
+      font-size: 14px;
+      cursor: pointer;
+      user-select: none;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.4);
     }
   </style>
 </head>
@@ -113,39 +142,48 @@
     <div id="playButton">Play 360° Video</div>
   </div>
 
-  <!-- Controls Bar (hidden until video starts) -->
+  <!-- Controls Bar -->
   <div id="controls">
     <button id="playPauseBtn">Pause</button>
     <div id="progress">
       <div id="progressBar"></div>
     </div>
     <select id="speedSelect">
-      <option value="0.5">0.5x</option>
-      <option value="0.75">0.75x</option>
-      <option value="1" selected>1x</option>
-      <option value="1.5">1.5x</option>
-      <option value="2">2x</option>
+      <option value="0.5">0.5×</option>
+      <option value="0.75">0.75×</option>
+      <option value="1" selected>1×</option>
+      <option value="1.5">1.5×</option>
+      <option value="2">2×</option>
     </select>
     <button id="muteBtn">Mute</button>
+    <div id="zoomContainer">
+      <label for="zoomSlider">Zoom:</label>
+      <input type="range" id="zoomSlider" min="60" max="150" value="110" step="1">
+    </div>
   </div>
+
+  <!-- Toggle Hide/Show Controls -->
+  <div id="toggleBtn">Hide Controls</div>
 
   <script>
     const playOverlay = document.getElementById('playOverlay');
     const controls = document.getElementById('controls');
+    const toggleBtn = document.getElementById('toggleBtn');
     const sphere = document.querySelector('#videoSphere');
     const playPauseBtn = document.getElementById('playPauseBtn');
     const progress = document.getElementById('progress');
     const progressBar = document.getElementById('progressBar');
     const speedSelect = document.getElementById('speedSelect');
     const muteBtn = document.getElementById('muteBtn');
+    const zoomSlider = document.getElementById('zoomSlider');
 
     let video = null;
+    let isControlsVisible = true;
 
-    // Wait for A-Frame to load the material/video
+    // Wait for video to be ready
     sphere.addEventListener('materialtextureloaded', () => {
       video = sphere.components.material.material.map.image;
       if (video) {
-        // Video is ready — enable controls after first play
         video.addEventListener('timeupdate', updateProgress);
         video.addEventListener('play', () => {
           playPauseBtn.textContent = 'Pause';
@@ -160,10 +198,10 @@
       }
     });
 
-    // Start video on first tap/click (anywhere)
+    // Start video on first interaction
     function startVideo() {
       if (video && video.paused) {
-        video.muted = false;  // Unmute for audio
+        video.muted = false;
         video.play().catch(err => console.log('Play failed:', err));
         playOverlay.style.display = 'none';
       }
@@ -174,16 +212,13 @@
     playOverlay.addEventListener('click', startVideo);
     playOverlay.addEventListener('touchend', startVideo);
 
-    // Play/Pause button
+    // Play/Pause
     playPauseBtn.addEventListener('click', () => {
-      if (video.paused) {
-        video.play();
-      } else {
-        video.pause();
-      }
+      if (video.paused) video.play();
+      else video.pause();
     });
 
-    // Speed control
+    // Speed
     speedSelect.addEventListener('change', () => {
       if (video) video.playbackRate = parseFloat(speedSelect.value);
     });
@@ -196,7 +231,7 @@
       }
     });
 
-    // Progress bar seek
+    // Progress seek
     progress.addEventListener('click', (e) => {
       if (video && video.duration) {
         const rect = progress.getBoundingClientRect();
@@ -211,6 +246,39 @@
         progressBar.style.width = percent + '%';
       }
     }
+
+    // Zoom slider (FOV)
+    zoomSlider.addEventListener('input', () => {
+      const fov = parseInt(zoomSlider.value);
+      sphere.setAttribute('camera', 'fov', fov);
+    });
+
+    // Hide/Show controls toggle
+    toggleBtn.addEventListener('click', () => {
+      isControlsVisible = !isControlsVisible;
+      if (isControlsVisible) {
+        controls.classList.add('visible');
+        toggleBtn.textContent = 'Hide Controls';
+      } else {
+        controls.classList.remove('visible');
+        toggleBtn.textContent = 'Show Controls';
+      }
+    });
+
+    // Auto-hide controls after inactivity (optional, 8 seconds)
+    let timeout;
+    function resetAutoHide() {
+      clearTimeout(timeout);
+      controls.classList.add('visible');
+      timeout = setTimeout(() => {
+        if (isControlsVisible) controls.classList.remove('visible');
+      }, 8000);
+    }
+
+    document.addEventListener('mousemove', resetAutoHide);
+    document.addEventListener('touchmove', resetAutoHide);
+    document.addEventListener('click', resetAutoHide);
+    document.addEventListener('touchend', resetAutoHide);
   </script>
 </body>
 </html>
