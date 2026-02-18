@@ -6,8 +6,17 @@
   <title>360° Video Viewer - JumpinJack</title>
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
   <style>
-    body, html { margin:0; padding:0; height:100%; overflow:hidden; background:#000; }
-    a-scene { width:100vw; height:100vh; }
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+    }
+    a-scene {
+      width: 100vw;
+      height: 100vh;
+    }
     #playOverlay {
       position: fixed;
       top: 0;
@@ -20,7 +29,7 @@
       justify-content: center;
       z-index: 1000;
       cursor: pointer;
-      pointer-events: all; /* Ensure clicks go to overlay, not canvas */
+      pointer-events: all;
     }
     #playButton {
       background: white;
@@ -31,6 +40,7 @@
       font-weight: bold;
       box-shadow: 0 4px 20px rgba(0,0,0,0.5);
       user-select: none;
+      text-align: center;
     }
   </style>
 </head>
@@ -45,7 +55,12 @@
       crossorigin="anonymous">
     </a-videosphere>
 
-    <a-entity camera look-controls wasd-controls position="0 1.6 0"></a-entity>
+    <a-entity
+      camera
+      look-controls
+      wasd-controls
+      position="0 1.6 0">
+    </a-entity>
   </a-scene>
 
   <!-- Play Overlay -->
@@ -57,32 +72,27 @@
     const overlay = document.getElementById('playOverlay');
     const sphere = document.querySelector('#videoSphere');
 
-    // Click anywhere on overlay or button to play
-    overlay.addEventListener('click', (e) => {
-      e.stopPropagation(); // Prevent A-Frame from capturing click
+    function startVideo() {
       const video = sphere.components.material.material.map.image;
-      if (video.paused) {
-        video.play().catch(err => console.log('Play failed:', err));
+      if (video && video.paused) {
+        video.muted = false;          // Unmute for audio
+        video.play().catch(err => {
+          console.log('Play failed:', err);
+          // Fallback: try again muted if blocked
+          video.muted = true;
+          video.play();
+        });
       }
       overlay.style.display = 'none';
-    });
+    }
 
-    // Fallback: Click anywhere on page (mobile tap)
-    document.addEventListener('click', () => {
-      if (overlay.style.display !== 'none') {
-        const video = sphere.components.material.material.map.image;
-        if (video.paused) {
-          video.play().catch(() => {});
-        }
-        overlay.style.display = 'none';
-      }
-    }, { once: true }); // Run only once
+    // Click or touch the overlay/button
+    overlay.addEventListener('click', startVideo);
+    overlay.addEventListener('touchend', startVideo);
 
-    // Optional: Mute initially to help autoplay on some browsers
-    sphere.addEventListener('materialtextureloaded', () => {
-      const video = sphere.components.material.material.map.image;
-      video.muted = true; // Unmute after first play if needed
-    });
+    // Click or touch anywhere on page (mobile fallback)
+    document.addEventListener('click', startVideo, { once: true });
+    document.addEventListener('touchend', startVideo, { once: true });
   </script>
 </body>
 </html>
