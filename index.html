@@ -37,53 +37,57 @@
     #playButton {
       background: white;
       color: black;
-      padding: 25px 60px;
+      padding: 20px 50px;
       border-radius: 60px;
-      font-size: 36px;
+      font-size: 32px;
       font-weight: bold;
       box-shadow: 0 6px 25px rgba(0,0,0,0.6);
       cursor: pointer;
       user-select: none;
     }
     #controls {
-      bottom: 20px;
+      bottom: 15px;
       left: 50%;
       transform: translateX(-50%);
       display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
       align-items: center;
-      gap: 15px;
-      padding: 12px 24px;
-      border-radius: 40px;
+      gap: 10px;
+      padding: 10px 15px;
+      border-radius: 30px;
       background: rgba(0,0,0,0.4);
       opacity: 0.4;
       transition: opacity 0.4s ease, background 0.3s;
+      max-width: 95%;
+      box-sizing: border-box;
     }
     #controls.visible {
-      opacity: 0.8;
+      opacity: 0.85;
       background: rgba(0,0,0,0.65);
     }
     #controls:hover, #controls:active {
       opacity: 1 !important;
-      background: rgba(0,0,0,0.8);
+      background: rgba(0,0,0,0.85);
     }
     button, select, input[type="range"] {
       background: rgba(255,255,255,0.9);
       color: black;
       border: none;
-      padding: 10px 16px;
-      border-radius: 30px;
-      font-size: 16px;
+      padding: 8px 12px;
+      border-radius: 20px;
+      font-size: 14px;
       cursor: pointer;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
     }
     button:hover, select:hover {
       background: white;
     }
     #progress {
-      width: 280px;
-      height: 8px;
+      width: 200px;
+      height: 6px;
       background: rgba(255,255,255,0.3);
-      border-radius: 4px;
+      border-radius: 3px;
       overflow: hidden;
       cursor: pointer;
     }
@@ -96,25 +100,48 @@
     #zoomContainer {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       color: white;
-      font-size: 14px;
+      font-size: 13px;
     }
     input[type="range"] {
-      width: 140px;
+      width: 100px;
       accent-color: #4CAF50;
     }
     #toggleBtn {
-      top: 15px;
-      right: 15px;
+      top: 10px;
+      right: 10px;
       background: rgba(255,255,255,0.8);
       color: black;
-      padding: 8px 16px;
-      border-radius: 30px;
-      font-size: 14px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 13px;
       cursor: pointer;
       user-select: none;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    }
+
+    /* Mobile responsiveness */
+    @media (max-width: 768px) {
+      #controls {
+        bottom: 10px;
+        padding: 8px 12px;
+        gap: 8px;
+      }
+      button, select {
+        padding: 6px 10px;
+        font-size: 13px;
+      }
+      #progress {
+        width: 140px;
+      }
+      #zoomContainer input[type="range"] {
+        width: 80px;
+      }
+      #playButton {
+        padding: 15px 40px;
+        font-size: 28px;
+      }
     }
   </style>
 </head>
@@ -181,7 +208,7 @@
     let isControlsVisible = true;
     let zoomTimeout = null;
 
-    // Wait for video to be ready
+    // Wait for video ready
     sphere.addEventListener('materialtextureloaded', () => {
       video = sphere.components.material.material.map.image;
       if (video) {
@@ -248,22 +275,23 @@
       }
     }
 
-    // Zoom slider with debounce (prevents black flashes during rapid changes)
+    // Zoom slider with debounce (prevents black flashes)
     zoomSlider.addEventListener('input', () => {
       clearTimeout(zoomTimeout);
       zoomTimeout = setTimeout(() => {
         const fov = parseInt(zoomSlider.value);
         sphere.setAttribute('camera', 'fov', fov);
-        // Force texture refresh to avoid black glitch
-        if (video) {
-          video.pause();
-          video.play();
-        }
-      }, 150); // 150ms debounce
+      }, 300); // Longer debounce = less black
     });
 
-    // Hide/Show controls toggle
-    toggleBtn.addEventListener('click', () => {
+    // Hide/Show toggle (more reliable touch handling)
+    toggleBtn.addEventListener('click', toggleControls);
+    toggleBtn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      toggleControls();
+    });
+
+    function toggleControls() {
       isControlsVisible = !isControlsVisible;
       if (isControlsVisible) {
         controls.classList.add('visible');
@@ -272,9 +300,9 @@
         controls.classList.remove('visible');
         toggleBtn.textContent = 'Show Controls';
       }
-    });
+    }
 
-    // Auto-hide controls after inactivity
+    // Auto-hide after inactivity
     let timeout;
     function resetAutoHide() {
       clearTimeout(timeout);
