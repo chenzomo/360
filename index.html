@@ -6,7 +6,99 @@
   <title>360° Video Viewer - JumpinJack</title>
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
   <style>
-    /* ... (keep all previous styles unchanged) ... */
+    :root {
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-bottom-fallback: 20px;
+    }
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      touch-action: manipulation;
+      padding-bottom: calc(var(--safe-bottom) + var(--safe-bottom-fallback));
+    }
+    a-scene {
+      width: 100vw;
+      height: 100vh;
+    }
+    #playOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding-bottom: var(--safe-bottom);
+      box-sizing: border-box;
+      color: white;
+    }
+    #playButton {
+      background: rgba(0,0,0,0.85);
+      color: #fff;
+      padding: 22px 58px;
+      border-radius: 60px;
+      font-size: 34px;
+      font-weight: bold;
+      box-shadow: 0 6px 28px rgba(0, 255, 120, 0.35);
+      border: 2px solid #00ff90;
+      user-select: none;
+      cursor: pointer;
+    }
+    #controls {
+      position: fixed;
+      bottom: calc(10px + var(--safe-bottom));
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 20px;
+      border-radius: 50px;
+      background: rgba(18, 18, 24, 0.82);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      z-index: 999;
+      max-width: 98%;
+      box-sizing: border-box;
+      transition: opacity 0.35s ease, transform 0.35s ease;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      min-height: 54px;
+    }
+    #controls.hidden {
+      opacity: 0;
+      transform: translateX(-50%) translateY(20px);
+      pointer-events: none;
+    }
+    button, select {
+      background: rgba(255,255,255,0.12);
+      color: #fff;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      min-height: 44px;
+      min-width: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    button:hover, select:hover { background: rgba(255,255,255,0.28); transform: scale(1.08); }
+    button:active, select:active { transform: scale(0.96); background: rgba(255,255,255,0.4); }
+    #speedSelect { background: rgba(0, 255, 140, 0.18); min-width: 68px; padding: 10px 14px; }
+    #speedSelect option { background: #1a1a22; color: #eee; }
+    #speedSelect option:checked, #speedSelect option[selected] { background: #00c070; color: #000; }
+    #progressContainer { display: flex; align-items: center; gap: 10px; flex: 1 1 auto; }
+    #progress { flex: 1; height: 8px; background: rgba(255,255,255,0.22); border-radius: 4px; overflow: hidden; cursor: pointer; min-width: 120px; }
+    #progressBar { width: 0%; height: 100%; background: #00ff90; transition: width 0.1s linear; }
+    #timeDisplay { min-width: 88px; text-align: center; color: #ddd; font-size: 14px; font-weight: 500; }
     #loadingOverlay {
       position: fixed;
       inset: 0;
@@ -21,9 +113,19 @@
       text-align: center;
       gap: 10px;
     }
-    #loadingOverlay span {
-      font-size: 18px;
-      opacity: 0.8;
+    #loadingOverlay span { font-size: 18px; opacity: 0.8; }
+
+    @media (max-width: 640px) {
+      #controls { padding: 8px 16px; gap: 8px; bottom: calc(8px + var(--safe-bottom)); }
+      button, select { padding: 10px 14px; font-size: 14px; min-height: 44px; min-width: 50px; }
+      #speedSelect { min-width: 64px; }
+      #progress { height: 10px; }
+      #timeDisplay { font-size: 13px; min-width: 78px; }
+    }
+    @media (max-width: 380px) {
+      #controls { padding: 10px 12px; flex-wrap: wrap; justify-content: center; gap: 8px 10px; }
+      #progressContainer { width: 100%; order: -1; }
+      #timeDisplay { min-width: 70px; }
     }
   </style>
 </head>
@@ -38,7 +140,7 @@
         webkit-playsinline
         loop
         muted
-        preload="metadata"  <!-- Changed: metadata first to reduce initial load pressure -->
+        preload="metadata"
       ></video>
     </a-assets>
 
@@ -56,28 +158,51 @@
 
   <div id="playOverlay">
     <div id="playButton">Play 360° Ver189</div>
-    <span style="color:white; margin-top:20px; font-size:16px; opacity:0.8;">(If buffering persists, try on faster WiFi or lower speed in controls)</span>
+    <span style="margin-top:20px; font-size:16px; opacity:0.8;">(If buffering persists on WiFi, hosting may need upgrade for better streaming)</span>
   </div>
 
   <div id="loadingOverlay">
     Buffering... <span>Please wait – video is loading chunks</span>
   </div>
 
-  <!-- Controls unchanged -->
+  <div id="controls" class="hidden">
+    <button id="playPauseBtn">Pause</button>
+    <div id="progressContainer">
+      <div id="timeDisplay">0:00 / 0:00</div>
+      <div id="progress">
+        <div id="progressBar"></div>
+      </div>
+    </div>
+    <select id="speedSelect">
+      <option value="0.5">0.5×</option>
+      <option value="0.75">0.75×</option>
+      <option value="1" selected>1×</option>
+      <option value="1.25">1.25×</option>
+      <option value="1.5">1.5×</option>
+      <option value="2">2×</option>
+    </select>
+    <button id="muteBtn">Mute</button>
+    <button id="fsBtn">⛶</button>
+  </div>
 
   <script>
-    // Custom touch look – slightly reduced sens on mobile for less GPU strain during stalls
     AFRAME.registerComponent('custom-touch-look', {
       schema: { enabled: {default: true}, invertY: {default: false} },
       init: function () {
         this.isTouch = false;
         this.startX = this.startY = 0;
-        this.sens = /Mobi|Android/i.test(navigator.userAgent) ? 0.065 : 0.085;  // lower on mobile
+        this.sens = /Mobi|Android/i.test(navigator.userAgent) ? 0.065 : 0.085;
         this.el.sceneEl.addEventListener('touchstart', this.onTouchStart.bind(this));
         this.el.sceneEl.addEventListener('touchmove', this.onTouchMove.bind(this));
         this.el.sceneEl.addEventListener('touchend', () => this.isTouch = false);
       },
-      onTouchStart: function (e) { /* unchanged */ },
+      onTouchStart: function (e) {
+        if (e.touches.length === 1) {
+          this.isTouch = true;
+          this.startX = e.touches[0].clientX;
+          this.startY = e.touches[0].clientY;
+        }
+      },
       onTouchMove: function (e) {
         if (!this.isTouch || e.touches.length !== 1) return;
         e.preventDefault();
@@ -93,13 +218,90 @@
       }
     });
 
-    // Main logic with enhanced buffering handling
     const video = document.querySelector('#video360');
     const playOverlay = document.getElementById('playOverlay');
     const loadingOverlay = document.getElementById('loadingOverlay');
-    // ... (rest of element grabs unchanged)
+    const controls = document.getElementById('controls');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const progress = document.getElementById('progress');
+    const progressBar = document.getElementById('progressBar');
+    const timeDisplay = document.getElementById('timeDisplay');
+    const speedSelect = document.getElementById('speedSelect');
+    const muteBtn = document.getElementById('muteBtn');
+    const fsBtn = document.getElementById('fsBtn');
 
-    // Show loading on more events
+    let hideTimer = null;
+
+    function showControls() {
+      controls.classList.remove('hidden');
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(() => {
+        if (!video.paused && !document.fullscreenElement) controls.classList.add('hidden');
+      }, 3400);
+    }
+
+    ['touchstart','click'].forEach(ev => {
+      document.querySelector('a-scene').addEventListener(ev, showControls, {passive: true});
+    });
+
+    function startPlayback() {
+      video.muted = false;
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise.then(() => playOverlay.style.display = 'none')
+          .catch(() => {
+            video.muted = true;
+            video.play().then(() => playOverlay.style.display = 'none');
+          });
+      }
+    }
+
+    ['click','touchend','pointerup'].forEach(ev => {
+      playOverlay.addEventListener(ev, startPlayback, {once: true, passive: false});
+      document.addEventListener(ev, startPlayback, {once: true, passive: false});
+    });
+
+    playPauseBtn.onclick = () => {
+      video[video.paused ? 'play' : 'pause']();
+      playPauseBtn.textContent = video.paused ? 'Play' : 'Pause';
+      showControls();
+    };
+
+    speedSelect.onchange = () => {
+      video.playbackRate = +speedSelect.value;
+      showControls();
+    };
+
+    muteBtn.onclick = () => {
+      video.muted = !video.muted;
+      muteBtn.textContent = video.muted ? 'Unmute' : 'Mute';
+      showControls();
+    };
+
+    fsBtn.onclick = () => {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+      else document.exitFullscreen?.();
+      showControls();
+    };
+
+    function updateUI() {
+      if (!video.duration) return;
+      const pct = (video.currentTime / video.duration) * 100;
+      progressBar.style.width = pct + '%';
+      timeDisplay.textContent = `${format(video.currentTime)} / ${format(video.duration)}`;
+    }
+
+    function format(s) {
+      const m = Math.floor(s / 60);
+      const sec = Math.floor(s % 60);
+      return `${m}:${sec.toString().padStart(2,'0')}`;
+    }
+
+    video.addEventListener('timeupdate', updateUI);
+    video.addEventListener('play', () => { playPauseBtn.textContent = 'Pause'; showControls(); });
+    video.addEventListener('pause', () => { playPauseBtn.textContent = 'Play'; showControls(); });
+    video.addEventListener('loadedmetadata', updateUI);
+
     video.addEventListener('waiting', () => { loadingOverlay.style.display = 'flex'; });
     video.addEventListener('stalled', () => { loadingOverlay.style.display = 'flex'; });
     video.addEventListener('suspend', () => { loadingOverlay.style.display = 'flex'; });
@@ -107,7 +309,6 @@
     video.addEventListener('seeked', () => { loadingOverlay.style.display = 'none'; });
     video.addEventListener('canplaythrough', () => { loadingOverlay.style.display = 'none'; });
 
-    // Seek with timeout fallback
     function seek(e) {
       e.preventDefault();
       if (!video.duration) return;
@@ -123,7 +324,7 @@
 
       const timeout = setTimeout(() => {
         if (loadingOverlay.style.display === 'flex') {
-          loadingOverlay.querySelector('span').textContent = 'Slow connection – try pausing or lower speed';
+          loadingOverlay.querySelector('span').textContent = 'Slow connection or hosting issue – try pausing';
         }
       }, 8000);
 
@@ -139,7 +340,16 @@
       showControls();
     }
 
-    // ... (rest of script unchanged: play/pause, speed, mute, fs, updateUI, etc.)
+    progress.addEventListener('click', seek);
+    progress.addEventListener('touchstart', seek, {passive: false});
+    progress.addEventListener('touchmove', seek, {passive: false});
+
+    if (/Mobi|Android/i.test(navigator.userAgent)) {
+      video.playbackRate = 1;
+      speedSelect.value = '1';
+    }
+
+    console.log("Player script loaded - check for errors in console (F12)");
   </script>
 </body>
 </html>
