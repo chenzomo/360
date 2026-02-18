@@ -18,16 +18,16 @@
       width: 100vw;
       height: 100vh;
     }
-    #playOverlay, #controls, #toggleBtn {
+    #playOverlay, #controls {
       position: fixed;
+      left: 0;
+      width: 100%;
       z-index: 1000;
       pointer-events: auto;
-      transition: opacity 0.4s ease;
+      transition: opacity 0.3s;
     }
     #playOverlay {
       top: 0;
-      left: 0;
-      width: 100%;
       height: 100%;
       background: rgba(0,0,0,0.6);
       display: flex;
@@ -36,7 +36,7 @@
     }
     #playButton {
       background: white;
-      color: #00ff00; /* Green text */
+      color: black;
       padding: 20px 50px;
       border-radius: 50px;
       font-size: 32px;
@@ -47,24 +47,18 @@
     }
     #controls {
       bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
       display: flex;
+      justify-content: center;
       align-items: center;
       gap: 15px;
-      padding: 12px 24px;
-      border-radius: 40px;
-      background: rgba(0,0,0,0.4);
-      opacity: 0.4;
-      transition: opacity 0.4s ease, background 0.3s;
+      opacity: 0;
+      background: rgba(0,0,0,0.5);
+      padding: 10px 20px;
+      border-radius: 30px;
+      transition: opacity 0.5s;
     }
     #controls.visible {
-      opacity: 0.8;
-      background: rgba(0,0,0,0.65);
-    }
-    #controls:hover, #controls:active {
-      opacity: 1 !important;
-      background: rgba(0,0,0,0.8);
+      opacity: 1;
     }
     button, select {
       background: rgba(255,255,255,0.9);
@@ -80,10 +74,10 @@
       background: white;
     }
     #progress {
-      width: 280px;
-      height: 8px;
+      width: 300px;
+      height: 6px;
       background: rgba(255,255,255,0.3);
-      border-radius: 4px;
+      border-radius: 3px;
       overflow: hidden;
       cursor: pointer;
     }
@@ -92,18 +86,6 @@
       height: 100%;
       background: #4CAF50;
       transition: width 0.1s linear;
-    }
-    #toggleBtn {
-      top: 15px;
-      right: 15px;
-      background: rgba(255,255,255,0.8);
-      color: black;
-      padding: 8px 16px;
-      border-radius: 30px;
-      font-size: 14px;
-      cursor: pointer;
-      user-select: none;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.4);
     }
   </style>
 </head>
@@ -131,29 +113,25 @@
     <div id="playButton">Play 360° Video</div>
   </div>
 
-  <!-- Controls Bar -->
+  <!-- Controls Bar (hidden until video starts) -->
   <div id="controls">
     <button id="playPauseBtn">Pause</button>
     <div id="progress">
       <div id="progressBar"></div>
     </div>
     <select id="speedSelect">
-      <option value="0.5">0.5×</option>
-      <option value="0.75">0.75×</option>
-      <option value="1" selected>1×</option>
-      <option value="1.5">1.5×</option>
-      <option value="2">2×</option>
+      <option value="0.5">0.5x</option>
+      <option value="0.75">0.75x</option>
+      <option value="1" selected>1x</option>
+      <option value="1.5">1.5x</option>
+      <option value="2">2x</option>
     </select>
     <button id="muteBtn">Mute</button>
   </div>
 
-  <!-- Toggle Hide/Show Controls -->
-  <div id="toggleBtn">Hide Controls</div>
-
   <script>
     const playOverlay = document.getElementById('playOverlay');
     const controls = document.getElementById('controls');
-    const toggleBtn = document.getElementById('toggleBtn');
     const sphere = document.querySelector('#videoSphere');
     const playPauseBtn = document.getElementById('playPauseBtn');
     const progress = document.getElementById('progress');
@@ -162,12 +140,12 @@
     const muteBtn = document.getElementById('muteBtn');
 
     let video = null;
-    let isControlsVisible = true;
 
-    // Wait for video to be ready
+    // Wait for A-Frame to load the material/video
     sphere.addEventListener('materialtextureloaded', () => {
       video = sphere.components.material.material.map.image;
       if (video) {
+        // Video is ready — enable controls after first play
         video.addEventListener('timeupdate', updateProgress);
         video.addEventListener('play', () => {
           playPauseBtn.textContent = 'Pause';
@@ -182,10 +160,10 @@
       }
     });
 
-    // Start video on first interaction
+    // Start video on first tap/click (anywhere)
     function startVideo() {
       if (video && video.paused) {
-        video.muted = false;
+        video.muted = false;  // Unmute for audio
         video.play().catch(err => console.log('Play failed:', err));
         playOverlay.style.display = 'none';
       }
@@ -196,13 +174,16 @@
     playOverlay.addEventListener('click', startVideo);
     playOverlay.addEventListener('touchend', startVideo);
 
-    // Play/Pause
+    // Play/Pause button
     playPauseBtn.addEventListener('click', () => {
-      if (video.paused) video.play();
-      else video.pause();
+      if (video.paused) {
+        video.play();
+      } else {
+        video.pause();
+      }
     });
 
-    // Speed
+    // Speed control
     speedSelect.addEventListener('change', () => {
       if (video) video.playbackRate = parseFloat(speedSelect.value);
     });
@@ -215,7 +196,7 @@
       }
     });
 
-    // Progress seek
+    // Progress bar seek
     progress.addEventListener('click', (e) => {
       if (video && video.duration) {
         const rect = progress.getBoundingClientRect();
@@ -230,41 +211,6 @@
         progressBar.style.width = percent + '%';
       }
     }
-
-    // Hide/Show controls toggle
-    toggleBtn.addEventListener('click', toggleControls);
-    toggleBtn.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      toggleControls();
-    });
-
-    function toggleControls() {
-      isControlsVisible = !isControlsVisible;
-      if (isControlsVisible) {
-        controls.classList.add('visible');
-        toggleBtn.textContent = 'Hide Controls';
-      } else {
-<!DOCTYPE html>
-<html lang="en">
-<head>visible');
-        toggleBtn.textContent = 'Show Controls';
-      }
-    }
-
-    // Auto-hide after inactivity
-    let timeout;
-    function resetAutoHide() {
-      clearTimeout(timeout);
-      controls.classList.add('visible');
-      timeout = setTimeout(() => {
-        if (isControlsVisible) controls.classList.remove('visible');
-      }, 8000);
-    }
-
-    document.addEventListener('mousemove', resetAutoHide);
-    document.addEventListener('touchmove', resetAutoHide);
-    document.addEventListener('click', resetAutoHide);
-    document.addEventListener('touchend', resetAutoHide);
   </script>
 </body>
 </html>
