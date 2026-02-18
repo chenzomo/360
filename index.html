@@ -18,47 +18,43 @@
       width: 100vw;
       height: 100vh;
     }
-    #playOverlay, #controls {
+    #playOverlay {
       position: fixed;
+      top: 0;
       left: 0;
       width: 100%;
-      z-index: 1000;
-      pointer-events: auto;
-      transition: opacity 0.3s;
-    }
-    #playOverlay {
-      top: 0;
       height: 100%;
       background: rgba(0,0,0,0.6);
       display: flex;
       align-items: center;
       justify-content: center;
+      z-index: 1000;
+      pointer-events: auto;
     }
     #playButton {
-      background: white;
-      color: black;
+      background: black;
+      color: white;
       padding: 20px 50px;
       border-radius: 50px;
       font-size: 32px;
       font-weight: bold;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      box-shadow: 0 4px 20px rgba(255,255,255,0.3);
       cursor: pointer;
       user-select: none;
     }
     #controls {
+      position: fixed;
       bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
       display: flex;
-      justify-content: center;
       align-items: center;
       gap: 15px;
-      opacity: 0;
-      background: rgba(0,0,0,0.5);
-      padding: 10px 20px;
-      border-radius: 30px;
-      transition: opacity 0.5s;
-    }
-    #controls.visible {
-      opacity: 1;
+      padding: 12px 24px;
+      border-radius: 40px;
+      background: rgba(0,0,0,0.65);
+      z-index: 1000;
+      pointer-events: auto;
     }
     button, select {
       background: rgba(255,255,255,0.9);
@@ -73,19 +69,31 @@
     button:hover, select:hover {
       background: white;
     }
+    #progressContainer {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: white;
+      font-size: 14px;
+    }
     #progress {
-      width: 300px;
-      height: 6px;
+      width: 320px;
+      height: 20px;
       background: rgba(255,255,255,0.3);
-      border-radius: 3px;
+      border-radius: 10px;
       overflow: hidden;
       cursor: pointer;
+      touch-action: manipulation;
     }
     #progressBar {
       width: 0%;
       height: 100%;
       background: #4CAF50;
       transition: width 0.1s linear;
+    }
+    #timeDisplay {
+      min-width: 100px;
+      text-align: center;
     }
   </style>
 </head>
@@ -108,23 +116,28 @@
     </a-entity>
   </a-scene>
 
-  <!-- Initial Play Overlay -->
+  <!-- Play Overlay -->
   <div id="playOverlay">
     <div id="playButton">Play 360° Video</div>
   </div>
 
-  <!-- Controls Bar (hidden until video starts) -->
+  <!-- Controls Bar (always visible) -->
   <div id="controls">
     <button id="playPauseBtn">Pause</button>
-    <div id="progress">
-      <div id="progressBar"></div>
+    <div id="progressContainer">
+      <div id="timeDisplay">0:00 / 0:00</div>
+      <div id="progress">
+        <div id="progressBar"></div>
+      </div>
     </div>
     <select id="speedSelect">
-      <option value="0.5">0.5x</option>
-      <option value="0.75">0.75x</option>
-      <option value="1" selected>1x</option>
-      <option value="1.5">1.5x</option>
-      <option value="2">2x</option>
+      <option value="0.5">0.5×</option>
+      <option value="0.75">0.75×</option>
+      <option value="1" selected>1×</option>
+      <option value="1.5">1.5×</option>
+      <option value="2">2×</option>
+      <option value="2.5">2.5×</option>
+      <option value="3">3×</option>
     </select>
     <button id="muteBtn">Mute</button>
   </div>
@@ -136,20 +149,19 @@
     const playPauseBtn = document.getElementById('playPauseBtn');
     const progress = document.getElementById('progress');
     const progressBar = document.getElementById('progressBar');
+    const timeDisplay = document.getElementById('timeDisplay');
     const speedSelect = document.getElementById('speedSelect');
     const muteBtn = document.getElementById('muteBtn');
 
     let video = null;
 
-    // Wait for A-Frame to load the material/video
+    // Wait for video to load
     sphere.addEventListener('materialtextureloaded', () => {
       video = sphere.components.material.material.map.image;
       if (video) {
-        // Video is ready — enable controls after first play
         video.addEventListener('timeupdate', updateProgress);
         video.addEventListener('play', () => {
           playPauseBtn.textContent = 'Pause';
-          controls.classList.add('visible');
         });
         video.addEventListener('pause', () => {
           playPauseBtn.textContent = 'Play';
@@ -157,13 +169,14 @@
         video.addEventListener('ended', () => {
           playPauseBtn.textContent = 'Play';
         });
+        updateProgress(); // Initial time display
       }
     });
 
-    // Start video on first tap/click (anywhere)
+    // Start video on first tap/click
     function startVideo() {
       if (video && video.paused) {
-        video.muted = false;  // Unmute for audio
+        video.muted = false;
         video.play().catch(err => console.log('Play failed:', err));
         playOverlay.style.display = 'none';
       }
@@ -174,16 +187,13 @@
     playOverlay.addEventListener('click', startVideo);
     playOverlay.addEventListener('touchend', startVideo);
 
-    // Play/Pause button
+    // Play/Pause
     playPauseBtn.addEventListener('click', () => {
-      if (video.paused) {
-        video.play();
-      } else {
-        video.pause();
-      }
+      if (video.paused) video.play();
+      else video.pause();
     });
 
-    // Speed control
+    // Speed
     speedSelect.addEventListener('change', () => {
       if (video) video.playbackRate = parseFloat(speedSelect.value);
     });
@@ -196,20 +206,36 @@
       }
     });
 
-    // Progress bar seek
-    progress.addEventListener('click', (e) => {
+    // Progress seek (click + touch)
+    progress.addEventListener('click', seek);
+    progress.addEventListener('touchstart', seek);
+    progress.addEventListener('touchmove', seek);
+
+    function seek(e) {
       if (video && video.duration) {
+        e.preventDefault();
         const rect = progress.getBoundingClientRect();
-        const pos = (e.clientX - rect.left) / rect.width;
+        const x = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
+        const pos = (x - rect.left) / rect.width;
         video.currentTime = pos * video.duration;
       }
-    });
+    }
 
     function updateProgress() {
       if (video && video.duration) {
+        const current = formatTime(video.currentTime);
+        const total = formatTime(video.duration);
+        timeDisplay.textContent = `${current} / ${total}`;
+
         const percent = (video.currentTime / video.duration) * 100;
         progressBar.style.width = percent + '%';
       }
+    }
+
+    function formatTime(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${mins}:${secs.toString().padStart(2, '0')}`;
     }
   </script>
 </body>
