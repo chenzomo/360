@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>360° Video Viewer - JumpinJack</title>
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+  <style>
+    body, html { margin:0; padding:0; height:100%; overflow:hidden; background:#000; }
+    a-scene { width:100vw; height:100vh; }
+  </style>
+</head>
+<body>
+  <a-scene embedded>
+    <a-videosphere
+      src="https://skymonte.drhole.com/s/ffQnwd5MLqTFnAA/download"
+      rotation="0 -90 0"
+      autoplay="false"
+      loop="true"
+      muted="false"
+      playsinline>
+    </a-videosphere>
+
+    <a-entity
+      camera
+      look-controls
+      wasd-controls
+      position="0 1.6 0">
+    </a-entity>
+  </a-scene>
+</body>
+</html>
