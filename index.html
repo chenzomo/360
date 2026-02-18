@@ -3,139 +3,181 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
-  <title>360° Mobile Optimized</title>
+  <title>360° Pro Player</title>
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
   <style>
-    :root {
-      --safe-bottom: env(safe-area-inset-bottom, 0px);
-      --neon: #00ff90;
-    }
-    body, html {
-      margin: 0; padding: 0; height: 100%; overflow: hidden;
-      background: #000; font-family: sans-serif;
-      /* Prevents the 'pull-to-refresh' gesture on mobile */
-      overscroll-behavior: none;
-    }
+    :root { --neon: #00ff90; --bg: rgba(15, 15, 20, 0.95); }
+    body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #000; font-family: -apple-system, sans-serif; overscroll-behavior: none; }
     
-    /* Play Overlay - Vital for Mobile Autoplay bypass */
+    /* Splash Screen */
     #playOverlay {
       position: fixed; inset: 0; background: #000;
       display: flex; flex-direction: column; align-items: center;
-      justify-content: center; z-index: 3000; color: white;
+      justify-content: center; z-index: 5000; color: white;
     }
     #playButton {
-      background: var(--neon); color: #000;
-      padding: 18px 40px; border-radius: 40px; font-size: 22px;
-      font-weight: bold; border: none; cursor: pointer;
+      background: none; color: var(--neon); padding: 15px 40px; 
+      border-radius: 40px; font-size: 20px; font-weight: bold; 
+      border: 2px solid var(--neon); cursor: pointer;
     }
 
+    /* Buffer/Loading indicator */
     #loadingOverlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.5);
-      display: none; align-items: center; justify-content: center;
-      z-index: 2000; color: white; pointer-events: none;
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.6); padding: 15px 25px; border-radius: 30px;
+      display: none; z-index: 4000; color: white; pointer-events: none;
     }
 
+    /* Control Bar */
     #controls {
-      position: fixed; bottom: calc(15px + var(--safe-bottom));
+      position: fixed; bottom: calc(20px + env(safe-area-inset-bottom, 0px));
       left: 50%; transform: translateX(-50%);
-      display: flex; align-items: center; gap: 10px;
-      padding: 10px 15px; border-radius: 30px;
-      background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px);
-      z-index: 1000; transition: opacity 0.3s;
-      width: 90%; max-width: 400px;
+      width: 92%; max-width: 500px;
+      background: var(--bg); backdrop-filter: blur(15px);
+      border-radius: 20px; padding: 15px;
+      display: flex; flex-direction: column; gap: 12px;
+      z-index: 3000; transition: opacity 0.3s, transform 0.3s;
+      border: 1px solid rgba(255,255,255,0.1);
     }
-    #controls.hidden { opacity: 0; pointer-events: none; }
+    #controls.hidden { opacity: 0; transform: translateX(-50%) translateY(20px); pointer-events: none; }
+
+    /* Timeline Styling */
+    .timeline-container { position: relative; width: 100%; height: 24px; display: flex; align-items: center; cursor: pointer; }
+    #progress { width: 100%; height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; overflow: hidden; }
+    #progressBar { width: 0%; height: 100%; background: var(--neon); }
     
-    #progress { flex: 1; height: 6px; background: rgba(255,255,255,0.3); border-radius: 3px; position: relative; }
-    #progressBar { width: 0%; height: 100%; background: var(--neon); border-radius: 3px; }
+    /* Control Row */
+    .btn-row { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+    .group { display: flex; align-items: center; gap: 10px; }
     
-    button { background: none; border: 1px solid #fff; color: #fff; padding: 5px 10px; border-radius: 15px; font-size: 12px; }
+    button, select {
+      background: rgba(255,255,255,0.1); color: #fff; border: none;
+      padding: 8px 12px; border-radius: 10px; font-size: 14px; font-weight: 600;
+    }
+    #timeDisplay { font-family: monospace; font-size: 12px; color: #aaa; }
   </style>
 </head>
 <body>
 
   <a-scene 
     loading-screen="enabled: false" 
-    vr-mode-ui="enabled: false"
-    device-orientation-permission-ui="enabled: true">
+    vr-mode-ui="enabled: false" 
+    device-orientation-permission-ui="enabled: false">
     
     <a-assets>
-      <video id="video360" 
-             src="https://skymonte.drhole.com/s/BzPnw2agLmBz6Fj/download"
-             crossorigin="anonymous" 
-             playsinline 
-             webkit-playsinline 
-             loop 
-             preload="auto"></video>
+      <video id="video360" src="https://skymonte.drhole.com/s/BzPnw2agLmBz6Fj/download"
+             crossorigin="anonymous" playsinline webkit-playsinline loop preload="auto"></video>
     </a-assets>
 
     <a-videosphere src="#video360" rotation="0 -90 0"></a-videosphere>
 
-    <a-entity id="camera" camera look-controls="pointerLockEnabled: false; reverseMouseDrag: false" position="0 1.6 0"></a-entity>
+    <a-entity id="camera" camera look-controls="magicWindowTrackingEnabled: false; touchEnabled: true;" position="0 1.6 0"></a-entity>
   </a-scene>
 
-  <div id="playOverlay">
-    <button id="playButton">TAP TO START</button>
-  </div>
-
+  <div id="playOverlay"><button id="playButton">ENTER 360° VIEW</button></div>
   <div id="loadingOverlay">Buffering...</div>
 
   <div id="controls" class="hidden">
-    <button id="playPauseBtn">Pause</button>
-    <div id="progress"><div id="progressBar"></div></div>
-    <button id="muteBtn">Mute</button>
+    <div class="timeline-container" id="timeline">
+      <div id="progress"><div id="progressBar"></div></div>
+    </div>
+
+    <div class="btn-row">
+      <div class="group">
+        <button id="playPauseBtn">Pause</button>
+        <span id="timeDisplay">0:00 / 0:00</span>
+      </div>
+      
+      <div class="group">
+        <select id="speedSelect">
+          <option value="0.5">0.5x</option>
+          <option value="1" selected>1.0x</option>
+          <option value="1.5">1.5x</option>
+          <option value="2">2.0x</option>
+        </select>
+        <button id="muteBtn">Mute</button>
+      </div>
+    </div>
   </div>
 
   <script>
     const video = document.getElementById('video360');
-    const playOverlay = document.getElementById('playOverlay');
-    const loadingOverlay = document.getElementById('loadingOverlay');
     const controls = document.getElementById('controls');
+    const progressBar = document.getElementById('progressBar');
+    const timeDisplay = document.getElementById('timeDisplay');
+    const loading = document.getElementById('loadingOverlay');
 
-    // MOBILE SYNC FIX: A-Frame sometimes needs a kick to update the video texture on mobile
-    video.addEventListener('play', () => {
-      const scene = document.querySelector('a-scene');
-      if (scene.hasLoaded) {
-        // Forces the renderer to keep the video texture updated
-        video.play();
-      }
-    });
-
-    // 1. Initial Interaction (Crucial for Mobile Audio/Video)
-    document.getElementById('playButton').addEventListener('click', function() {
+    // 1. Launch Experience
+    document.getElementById('playButton').onclick = () => {
       video.play();
-      playOverlay.style.display = 'none';
+      document.getElementById('playOverlay').style.display = 'none';
       controls.classList.remove('hidden');
-    });
-
-    // 2. Buffer Management
-    video.addEventListener('waiting', () => { loadingOverlay.style.display = 'flex'; });
-    video.addEventListener('playing', () => { loadingOverlay.style.display = 'none'; });
-
-    // 3. UI logic
-    document.getElementById('playPauseBtn').onclick = () => {
-      if (video.paused) { video.play(); document.getElementById('playPauseBtn').textContent = 'Pause'; }
-      else { video.pause(); document.getElementById('playPauseBtn').textContent = 'Play'; }
     };
 
+    // 2. Mobile-Friendly Timeline (Scrubbing)
+    const handleSeek = (e) => {
+      const rect = document.getElementById('timeline').getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
+      const percentage = x / rect.width;
+      video.currentTime = percentage * video.duration;
+    };
+
+    document.getElementById('timeline').addEventListener('mousedown', handleSeek);
+    document.getElementById('timeline').addEventListener('touchstart', (e) => {
+      e.preventDefault(); // Stop camera rotation while seeking
+      handleSeek(e);
+    }, {passive: false});
+
+    // 3. Double-Tap to Fast Forward / Rewind
+    let lastTap = 0;
+    document.body.addEventListener('touchend', (e) => {
+      const now = Date.now();
+      if (now - lastTap < 300) {
+        const x = e.changedTouches[0].clientX;
+        if (x > window.innerWidth / 2) video.currentTime += 10; // Forward 10s
+        else video.currentTime -= 10; // Back 10s
+      }
+      lastTap = now;
+    });
+
+    // 4. Update UI
+    video.addEventListener('timeupdate', () => {
+      const p = (video.currentTime / video.duration) * 100;
+      progressBar.style.width = p + '%';
+      timeDisplay.textContent = `${format(video.currentTime)} / ${format(video.duration || 0)}`;
+    });
+
+    function format(s) {
+      const m = Math.floor(s / 60);
+      const sec = Math.floor(s % 60);
+      return `${m}:${sec.toString().padStart(2, '0')}`;
+    }
+
+    // 5. Playback & Buffer Logic
+    document.getElementById('playPauseBtn').onclick = () => {
+      if (video.paused) { video.play(); playPauseBtn.textContent = 'Pause'; }
+      else { video.pause(); playPauseBtn.textContent = 'Play'; }
+    };
+
+    document.getElementById('speedSelect').onchange = (e) => video.playbackRate = e.target.value;
     document.getElementById('muteBtn').onclick = (e) => {
       video.muted = !video.muted;
       e.target.textContent = video.muted ? 'Unmute' : 'Mute';
     };
 
-    video.addEventListener('timeupdate', () => {
-      const p = (video.currentTime / video.duration) * 100;
-      document.getElementById('progressBar').style.width = p + '%';
-    });
+    video.addEventListener('waiting', () => loading.style.display = 'block');
+    video.addEventListener('playing', () => loading.style.display = 'none');
 
-    // 4. Mobile Gesture Protection
-    // Prevents the browser from swiping the whole page while you are looking around
-    document.body.addEventListener('touchmove', function(e) {
-        if(e.target.closest('a-scene')) {
-            e.preventDefault();
-        }
-    }, { passive: false });
-
+    // 6. Auto-hide controls
+    let hideAction;
+    const showUI = () => {
+      controls.classList.remove('hidden');
+      clearTimeout(hideAction);
+      if (!video.paused) hideAction = setTimeout(() => controls.classList.add('hidden'), 3000);
+    };
+    document.body.addEventListener('touchstart', showUI);
+    document.body.addEventListener('mousemove', showUI);
   </script>
 </body>
 </html>
