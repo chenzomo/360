@@ -12,35 +12,80 @@
       height: 100%;
       overflow: hidden;
       background: #000;
+      font-family: Arial, sans-serif;
     }
     a-scene {
       width: 100vw;
       height: 100vh;
     }
-    #playOverlay {
+    #playOverlay, #controls {
       position: fixed;
-      top: 0;
       left: 0;
       width: 100%;
+      z-index: 1000;
+      pointer-events: auto;
+      transition: opacity 0.3s;
+    }
+    #playOverlay {
+      top: 0;
       height: 100%;
       background: rgba(0,0,0,0.6);
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 1000;
-      cursor: pointer;
-      pointer-events: all;
     }
     #playButton {
       background: white;
       color: black;
-      padding: 20px 40px;
+      padding: 20px 50px;
       border-radius: 50px;
-      font-size: 28px;
+      font-size: 32px;
       font-weight: bold;
       box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      cursor: pointer;
       user-select: none;
-      text-align: center;
+    }
+    #controls {
+      bottom: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 15px;
+      opacity: 0;
+      background: rgba(0,0,0,0.5);
+      padding: 10px 20px;
+      border-radius: 30px;
+      transition: opacity 0.5s;
+    }
+    #controls.visible {
+      opacity: 1;
+    }
+    button, select {
+      background: rgba(255,255,255,0.9);
+      color: black;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 30px;
+      font-size: 16px;
+      cursor: pointer;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+    }
+    button:hover, select:hover {
+      background: white;
+    }
+    #progress {
+      width: 300px;
+      height: 6px;
+      background: rgba(255,255,255,0.3);
+      border-radius: 3px;
+      overflow: hidden;
+      cursor: pointer;
+    }
+    #progressBar {
+      width: 0%;
+      height: 100%;
+      background: #4CAF50;
+      transition: width 0.1s linear;
     }
   </style>
 </head>
@@ -63,36 +108,109 @@
     </a-entity>
   </a-scene>
 
-  <!-- Play Overlay -->
+  <!-- Initial Play Overlay -->
   <div id="playOverlay">
     <div id="playButton">Play 360° Video</div>
   </div>
 
-  <script>
-    const overlay = document.getElementById('playOverlay');
-    const sphere = document.querySelector('#videoSphere');
+  <!-- Controls Bar (hidden until video starts) -->
+  <div id="controls">
+    <button id="playPauseBtn">Pause</button>
+    <div id="progress">
+      <div id="progressBar"></div>
+    </div>
+    <select id="speedSelect">
+      <option value="0.5">0.5x</option>
+      <option value="0.75">0.75x</option>
+      <option value="1" selected>1x</option>
+      <option value="1.5">1.5x</option>
+      <option value="2">2x</option>
+    </select>
+    <button id="muteBtn">Mute</button>
+  </div>
 
-    function startVideo() {
-      const video = sphere.components.material.material.map.image;
-      if (video && video.paused) {
-        video.muted = false;          // Unmute for audio
-        video.play().catch(err => {
-          console.log('Play failed:', err);
-          // Fallback: try again muted if blocked
-          video.muted = true;
-          video.play();
+  <script>
+    const playOverlay = document.getElementById('playOverlay');
+    const controls = document.getElementById('controls');
+    const sphere = document.querySelector('#videoSphere');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const progress = document.getElementById('progress');
+    const progressBar = document.getElementById('progressBar');
+    const speedSelect = document.getElementById('speedSelect');
+    const muteBtn = document.getElementById('muteBtn');
+
+    let video = null;
+
+    // Wait for A-Frame to load the material/video
+    sphere.addEventListener('materialtextureloaded', () => {
+      video = sphere.components.material.material.map.image;
+      if (video) {
+        // Video is ready — enable controls after first play
+        video.addEventListener('timeupdate', updateProgress);
+        video.addEventListener('play', () => {
+          playPauseBtn.textContent = 'Pause';
+          controls.classList.add('visible');
+        });
+        video.addEventListener('pause', () => {
+          playPauseBtn.textContent = 'Play';
+        });
+        video.addEventListener('ended', () => {
+          playPauseBtn.textContent = 'Play';
         });
       }
-      overlay.style.display = 'none';
+    });
+
+    // Start video on first tap/click (anywhere)
+    function startVideo() {
+      if (video && video.paused) {
+        video.muted = false;  // Unmute for audio
+        video.play().catch(err => console.log('Play failed:', err));
+        playOverlay.style.display = 'none';
+      }
     }
 
-    // Click or touch the overlay/button
-    overlay.addEventListener('click', startVideo);
-    overlay.addEventListener('touchend', startVideo);
-
-    // Click or touch anywhere on page (mobile fallback)
     document.addEventListener('click', startVideo, { once: true });
     document.addEventListener('touchend', startVideo, { once: true });
+    playOverlay.addEventListener('click', startVideo);
+    playOverlay.addEventListener('touchend', startVideo);
+
+    // Play/Pause button
+    playPauseBtn.addEventListener('click', () => {
+      if (video.paused) {
+        video.play();
+      } else {
+        video.pause();
+      }
+    });
+
+    // Speed control
+    speedSelect.addEventListener('change', () => {
+      if (video) video.playbackRate = parseFloat(speedSelect.value);
+    });
+
+    // Mute/Unmute
+    muteBtn.addEventListener('click', () => {
+      if (video) {
+        video.muted = !video.muted;
+        muteBtn.textContent = video.muted ? 'Unmute' : 'Mute';
+      }
+    });
+
+    // Progress bar seek
+    progress.addEventListener('click', (e) => {
+      if (video && video.duration) {
+        const rect = progress.getBoundingClientRect();
+        const pos = (e.clientX - rect.left) / rect.width;
+        video.currentTime = pos * video.duration;
+      }
+    });
+
+    function updateProgress() {
+      if (video && video.duration) {
+        const percent = (video.currentTime / video.duration) * 100;
+        progressBar.style.width = percent + '%';
+      }
+    }
   </script>
 </body>
 </html>
