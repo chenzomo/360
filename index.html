@@ -9,7 +9,301 @@
     body, html {
       margin: 0;
       padding: 0;
+      height: 100%;<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>360° Video Viewer - JumpinJack</title>
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
       height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: Arial, sans-serif;
+    }
+    a-scene {
+      width: 100vw;
+      height: 100vh;
+    }
+    #playOverlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      pointer-events: auto;
+    }
+    #playButton {
+      background: black;
+      color: white;
+      padding: 20px 50px;
+      border-radius: 50px;
+      font-size: 32px;
+      font-weight: bold;
+      box-shadow: 0 4px 20px rgba(255,255,255,0.3);
+      cursor: pointer;
+      user-select: none;
+    }
+    #controls {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding: 12px 24px;
+      border-radius: 40px;
+      background: rgba(0,0,0,0.65);
+      z-index: 999;
+      max-width: 95%;
+      box-sizing: border-box;
+    }
+    button, select {
+      background: rgba(255,255,255,0.15);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      backdrop-filter: blur(5px);
+    }
+    button:hover, select:hover {
+      background: rgba(255,255,255,0.3);
+      transform: scale(1.05);
+    }
+    #progress {
+      width: 280px;
+      height: 20px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 10px;
+      overflow: hidden;
+      cursor: pointer;
+      touch-action: manipulation;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    #progressBar {
+      width: 0%;
+      height: 100%;
+      background: #00ff00;
+      transition: width 0.1s linear;
+    }
+    #timeDisplay {
+      min-width: 80px;
+      text-align: center;
+      color: white;
+      font-size: 14px;
+    }
+    /* Mobile tweaks */
+    @media (max-width: 600px) {
+      #playButton {
+        padding: 18px 45px;
+        font-size: 28px;
+      }
+      #controls {
+        padding: 10px 14px;
+        gap: 8px;
+        bottom: 12px;
+      }
+      button, select {
+        padding: 8px 12px;
+        font-size: 14px;
+      }
+      #progress {
+        width: 200px;
+        height: 18px;
+      }
+      #timeDisplay {
+        font-size: 13px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <a-scene embedded>
+    <a-videosphere
+      id="videoSphere"
+      src="https://skymonte.drhole.com/s/srg5tQjw3oWMykX/download"
+      rotation="0 -90 0"
+      loop="true"
+      playsinline
+      crossorigin="anonymous">
+    </a-videosphere>
+
+    <a-entity
+      camera
+      look-controls
+      wasd-controls
+      position="0 1.6 0">
+    </a-entity>
+  </a-scene>
+
+  <!-- Play Overlay -->
+  <div id="playOverlay">
+    <div id="playButton">Play 360° Ver3</div>
+  </div>
+
+  <!-- Controls Bar (always visible) -->
+  <div id="controls">
+    <button id="playPauseBtn">Pause</button>
+    <div id="progressContainer">
+      <div id="timeDisplay">0:00 / 0:00</div>
+      <div id="progress">
+        <div id="progressBar"></div>
+      </div>
+    </div>
+    <select id="speedSelect">
+      <option value="0.75">0.75×</option>
+      <option value="1" selected>1×</option>
+      <option value="1.5">1.5×</option>
+      <option value="2">2×</option>
+      <option value="2.5">2.5×</option>
+      <option value="3">3×</option>
+    </select>
+    <button id="muteBtn">Mute</button>
+  </div>
+
+  <script>
+    const playOverlay = document.getElementById('playOverlay');
+    const controls = document.getElementById('controls');
+    const sphere = document.querySelector('#videoSphere');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const progress = document.getElementById('progress');
+    const progressBar = document.getElementById('progressBar');
+    const timeDisplay = document.getElementById('timeDisplay');
+    const speedSelect = document.getElementById('speedSelect');
+    const muteBtn = document.getElementById('muteBtn');
+
+    let video = null;
+    let playStarted = false;
+
+    // Wait for video to load
+    sphere.addEventListener('materialtextureloaded', () => {
+      video = sphere.components.material.material.map.image;
+      if (video) {
+        video.addEventListener('timeupdate', updateProgress);
+        video.addEventListener('play', () => {
+          playPauseBtn.textContent = 'Pause';
+          if (!playStarted) {
+            playOverlay.style.display = 'none';
+            playStarted = true;
+          }
+        });
+        video.addEventListener('pause', () => {
+          playPauseBtn.textContent = 'Play';
+        });
+        video.addEventListener('ended', () => {
+          playPauseBtn.textContent = 'Play';
+        });
+        updateProgress();
+      }
+    });
+
+    // Start video on first interaction
+    function startVideo(e) {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      if (video && video.paused) {
+        video.muted = false;
+        const playPromise = video.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              playOverlay.style.display = 'none';
+              playStarted = true;
+            })
+            .catch(err => {
+              console.log('Play failed:', err);
+              video.muted = true;
+              video.play();
+              playOverlay.style.display = 'none';
+              playStarted = true;
+            });
+        } else {
+          video.play();
+          playOverlay.style.display = 'none';
+          playStarted = true;
+        }
+      }
+      // Safety fallback: hide overlay after 1.5 seconds if play didn't trigger
+      setTimeout(() => {
+        if (!playStarted) {
+          playOverlay.style.display = 'none';
+          playStarted = true;
+        }
+      }, 1500);
+    }
+
+    // Attach multiple events for iOS reliability
+    ['click', 'touchend', 'pointerup', 'pointerdown'].forEach(event => {
+      document.addEventListener(event, startVideo, { once: true, passive: false });
+      playOverlay.addEventListener(event, startVideo, { passive: false });
+    });
+
+    // Play/Pause
+    playPauseBtn.addEventListener('click', () => {
+      if (video.paused) video.play();
+      else video.pause();
+    });
+
+    // Speed
+    speedSelect.addEventListener('change', () => {
+      if (video) video.playbackRate = parseFloat(speedSelect.value);
+    });
+
+    // Mute/Unmute
+    muteBtn.addEventListener('click', () => {
+      if (video) {
+        video.muted = !video.muted;
+        muteBtn.textContent = video.muted ? 'Unmute' : 'Mute';
+      }
+    });
+
+    // Progress seek
+    progress.addEventListener('click', seek);
+    progress.addEventListener('touchstart', seek, { passive: false });
+    progress.addEventListener('touchmove', seek, { passive: false });
+
+    function seek(e) {
+      if (e) e.preventDefault();
+      if (video && video.duration) {
+        const rect = progress.getBoundingClientRect();
+        const x = e.type.startsWith('touch') ? e.touches[0].clientX : e.clientX;
+        const pos = Math.max(0, Math.min(1, (x - rect.left) / rect.width));
+        video.currentTime = pos * video.duration;
+      }
+    }
+
+    function updateProgress() {
+      if (video && video.duration) {
+        const current = formatTime(video.currentTime);
+        const total = formatTime(video.duration);
+        timeDisplay.textContent = `${current} / ${total}`;
+
+        const percent = (video.currentTime / video.duration) * 100;
+        progressBar.style.width = percent + '%';
+      }
+    }
+
+    function formatTime(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+  </script>
+</body>
+</html>
       overflow: hidden;
       background: #000;
       font-family: Arial, sans-serif;
